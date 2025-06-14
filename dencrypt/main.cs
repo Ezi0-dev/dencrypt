@@ -109,6 +109,7 @@ class Program
         try
         {
             fsTemp = new FileStream(tempFilePath, FileMode.Create, FileAccess.ReadWrite);
+            Console.WriteLine("Encrypting file...");
             // -- Starts writing data --
             // Write salt
             fsTemp.Write(salt, 0, salt.Length);
@@ -120,6 +121,7 @@ class Program
             {
                 aes.Key = aesKey;
                 aes.IV = aesIV;
+                aes.Padding = PaddingMode.PKCS7;
                 // Default CBC + PKCS7 padding
 
                 // Position fsTemp (after salt+IV)
@@ -164,9 +166,11 @@ class Program
         const int saltLength = 16;
         const int ivLength = 16;
         const int hmacLength = 32;
+        
+        string tempFile = inputFilePath + ".tmp";
 
         // Open the encrypted file
-        using (FileStream fsIn = new FileStream(inputFilePath, FileMode.Open, FileAccess.ReadWrite))
+        using (FileStream fsIn = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read))
         {
             long totalLength = fsIn.Length;
             if (totalLength < saltLength + ivLength + hmacLength)
@@ -213,7 +217,7 @@ class Program
             fsIn.Seek(saltLength + ivLength + ciphertextLength, SeekOrigin.Begin);
             byte[] storedHmac = new byte[hmacLength];
             fsIn.Read(storedHmac, 0, hmacLength);
-            
+
             // 6.1 Constant time comparison
             if (!ByteArraysEqualConstantTime(computedHmac, storedHmac))
             {
@@ -221,7 +225,7 @@ class Program
             }
 
             // 7. If HMAC is OK -> decrypt to temp
-            string tempFile = inputFilePath + ".tmp";
+
             // Position fsIn at start of ciphertext
             fsIn.Seek(saltLength + ivLength, SeekOrigin.Begin);
 
@@ -230,6 +234,7 @@ class Program
             {
                 aes.Key = aesKey;
                 aes.IV = iv;
+                aes.Padding = PaddingMode.PKCS7;
 
                 // Decrypt only ciphertextLength bytes
                 using (CryptoStream csDecrypt = new CryptoStream(fsIn, aes.CreateDecryptor(), CryptoStreamMode.Read))
@@ -237,11 +242,13 @@ class Program
                 {
                     byte[] buffer = new byte[8192];
                     long remaining = ciphertextLength;
+
                     while (remaining > 0)
                     {
                         int toRead = (int)Math.Min(buffer.Length, remaining);
                         int read = csDecrypt.Read(buffer, 0, toRead);
                         if (read <= 0) break;
+
                         fsOut.Write(buffer, 0, read);
                         remaining -= read;
                     }
