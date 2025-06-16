@@ -108,6 +108,10 @@ class Program
         const int saltLength = 16;
         byte[] aesKey, aesIV, hmacKey;
 
+        string fileExtension = Path.GetExtension(inputFilePath).TrimStart('.');
+        byte[] extBytes = Encoding.UTF8.GetBytes(fileExtension);
+        byte extLength = (byte)extBytes.Length;
+
         // Generates salt
         byte[] salt = GenerateRandomBytes(saltLength);
 
@@ -140,9 +144,9 @@ class Program
                 fsOut.Write(salt, 0, salt.Length);
                 fsOut.Write(aesIV, 0, aesIV.Length);
 
-                string fileExtension = Path.GetExtension(inputFilePath).TrimStart('.');
-                byte[] extBytes = Encoding.UTF8.GetBytes(fileExtension);
-                byte extLength = (byte)extBytes.Length; // To make sure the code doesnt explode if its for example a webm (4bytes) instead of a txt (3bytes)
+                // Get file extension
+                fsOut.WriteByte(extLength);
+                fsOut.Write(extBytes, 0, extBytes.Length);
 
                 ciphertextStart = fsOut.Position;
 
@@ -202,17 +206,18 @@ class Program
         string expectedHeader = "DENCRYPT01"; // Better
         int headerLength = expectedHeader.Length;
         
-        string tempFile = inputFilePath + ".enc";
-
         byte[] salt, iv, storedHmac, computedHmac;
-        long ciphertextLength;
         byte[] aesKey, aesIV, hmacKey;
+        long ciphertextLength;
+        string originalExtension;
+        
+        string tempOutputPath = inputFilePath + ".enc";
 
         // Open the encrypted file
         using (FileStream fsIn = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read))
         {
             long totalLength = fsIn.Length;
-            if (totalLength < headerLength + saltLength + ivLength + hmacLength)
+            if (totalLength < headerLength + 1 + saltLength + ivLength + hmacLength)
             {
                 throw new Exception("File too small to be valid encrypted data.");
             }
@@ -225,27 +230,31 @@ class Program
                 throw new Exception("❌ Invalid file header.");
             }
 
-            // 1. Reads the Salt
+            // 1. Read extension
+            int extLength = fsIn.ReadByte();
+            byte[] extBytes = new byte[extLength];
+            fsIn.Read(extBytes, 0, extLength);
+            string originalExtension = Encoding.UTF8.GetString(extBytes);
+
+            // 2. Reads the Salt and IV
             salt = ReadExact(fsIn, saltLength, "Salt");
-
-            // 2. Derive the keys
-            (aesKey, aesIV, hmacKey) = DeriveKeysFromPassword(password, salt);
-
-            // 3. Reads IV
             iv = ReadExact(fsIn, ivLength, "IV");
 
+            // 3. Derive the keys
+            (aesKey, aesIV, hmacKey) = DeriveKeysFromPassword(password, salt);
+
             // 4. Compute ciphertext length
-            ciphertextLength = totalLength - headerLength - saltLength - ivLength - hmacLength;
+            long cipherStart = headerLength + 1 + extLength + saltLength + ivLength;
+            long cipherLength = totalLength - cipherStart - hmacLength;
 
             // 5. Verify HMAC, compute it over salt+IV+ciphertext
             // Seek back to start then reads salt+IV+ciphertext
+
             fsIn.Seek(0, SeekOrigin.Begin);
-            // Reusing ComputeHmacOverStream but limit it to reading Salt+Iv+Ciphertext only
             using (var hmac = new HMACSHA256(hmacKey))
             {
-                // Read salt + IV + Ciphertext in chuncks to avoid big files making program unstable. 8kb chuncks currently
                 byte[] buffer = new byte[8192];
-                long bytesToRead = headerLength + saltLength + ivLength + ciphertextLength;
+                long bytesToRead = totalLength - hmacLength;
                 long totalRead = 0;
                 while (totalRead < bytesToRead)
                 {
@@ -258,47 +267,50 @@ class Program
                 computedHmac = hmac.Hash;
             }
 
-            // 6. Read stored HMAC from file
-            fsIn.Seek(headerLength + saltLength + ivLength + ciphertextLength, SeekOrigin.Begin);
+            // 6. Read stored HMAC
+            fsIn.Seek(totalLength - hmacLength, SeekOrigin.Begin);
             storedHmac = ReadExact(fsIn, hmacLength, "HMAC");
 
             // 6.1 Constant time comparison
             if (!ByteArraysEqualConstantTime(computedHmac, storedHmac))
-            {
                 throw new Exception("❌ HMAC mismatch: wrong password or corrupted file. Decryption aborted, original file left intact.");
-            }
 
             // Done reading, fsIn closed here ---
         }
 
         // 7. If HMAC is OK -> decrypt to temp, using substream
-        // Position fsIn at start of ciphertext
-        using (FileStream fsIn = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read))
-        using (var subStream = new SubStream(fsIn, headerLength + saltLength + ivLength, ciphertextLength))
-        using (FileStream fsOut = new FileStream(tempFile, FileMode.Create, FileAccess.Write))
-        using (Aes aes = Aes.Create())
-        try
-        {
-            aes.Key = aesKey;
-            aes.IV = aesIV;
-            aes.Padding = PaddingMode.PKCS7;
 
-            using (CryptoStream csDecrypt = new CryptoStream(subStream, aes.CreateDecryptor(), CryptoStreamMode.Read))
+
+        // using (FileStream fsIn = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read))
+        // using (var subStream = new SubStream(fsIn, headerLength + saltLength + ivLength, ciphertextLength))
+        // using (FileStream fsOut = new FileStream(tempFile, FileMode.Create, FileAccess.Write))
+        
+        using (FileStream fsInDecrypt = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read))
+        using (SubStream cipherStream = new SubStream(fsInDecrypt, cipherStart, cipherLength))
+        using (FileStream fsOut = new FileStream(tempOutputPath, FileMode.Create, FileAccess.Write))
+        using (Aes aes = Aes.Create())
+            try
             {
-                csDecrypt.CopyTo(fsOut); // Nice
+                aes.Key = aesKey;
+                aes.IV = aesIV;
+                aes.Padding = PaddingMode.PKCS7;
+
+                using (CryptoStream csDecrypt = new CryptoStream(subStream, aes.CreateDecryptor(), CryptoStreamMode.Read))
+                {
+                    csDecrypt.CopyTo(fsOut); // Nice
+                }
             }
-        }
-        catch (Exception)
-        {
-            if (File.Exists(tempFile))
-                File.Delete(tempFile);
-            throw;
-        }
+            catch (Exception)
+            {
+                if (File.Exists(tempFile))
+                    File.Delete(tempFile);
+                throw;
+            }
 
         // All Done. Close streams.
         // 8. Replace original encrypted file with decrypted file
         File.Delete(inputFilePath);
-        File.Move(tempFile, inputFilePath);
+        File.Move(tempOutputPath, Path.ChangeExtension(inputFilePath, originalExtension));
 
         // 9. Zero out sensitive data
         Array.Clear(aesKey, 0, aesKey.Length);
