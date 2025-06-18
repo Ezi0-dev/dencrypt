@@ -3,6 +3,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace DencryptCore
 {
@@ -237,7 +238,7 @@ namespace DencryptCore
                 throw new Exception($"Failed to read {label}");
             return buffer;
         }
-        
+
         public static (byte[] AesKey, byte[] AesIV, byte[] HmacKey) DeriveKeysFromPassword(string password, byte[] salt)
         {
             // 80 bytes of key material
@@ -290,6 +291,43 @@ namespace DencryptCore
             }
             hmac.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
             return hmac.Hash;
+        }
+
+        public static List<string> GetAllFilesInFolder(string folderPath)
+        {
+            return Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories).ToList();
+        }
+
+        public static void EncryptFolder(string folderPath, string password)
+        {
+            var files = GetAllFilesInFolder(folderPath);
+            foreach (string file in files)
+            {
+                try
+                {
+                    EncryptFileOverwrite(file, password);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Error encrypting {file}: {ex.Message}");
+                }
+            }
+        }
+        
+        public static void DecryptFolder(string folderPath, string password)
+        {
+            var files = GetAllFilesInFolder(folderPath);
+            foreach (string file in files)
+            {
+                try
+                {
+                    DecryptFileOverwrite(file, password);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Error decrypting {file}: {ex.Message}");
+                }
+            }
         }
     }
 }

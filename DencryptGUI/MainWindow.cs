@@ -10,28 +10,111 @@ public partial class MainWindow : Form
     public MainWindow()
     {
         InitializeComponent();
-
-        // UI setup
         this.Text = "Dencrypt";
-        this.Size = new Size(600, 400);
+        this.Size = new Size(700, 650);
+        this.AutoSize = true;
+        this.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        this.FormBorderStyle = FormBorderStyle.FixedDialog;
+        this.MaximizeBox = false;
 
-        Label lblPassword = new Label() { Text = "Password:", Location = new Point(10, 10), AutoSize = true };
-        TextBox txtPassword = new TextBox() { Location = new Point(80, 10), Width = 400, PasswordChar = '*' };
+        FlowLayoutPanel mainPanel = new FlowLayoutPanel()
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.TopDown,
+            AutoScroll = true,
+            Padding = new Padding(10),
+            WrapContents = false
+        };
+        this.Controls.Add(mainPanel);
 
-        Button btnSelectFiles = new Button() { Text = "Select Files", Location = new Point(10, 50) };
-        Button btnEncrypt = new Button() { Text = "Encrypt", Location = new Point(120, 50) };
-        Button btnDecrypt = new Button() { Text = "Decrypt", Location = new Point(220, 50) };
+        FlowLayoutPanel passwordRow = new FlowLayoutPanel()
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            AutoSize = true,
+            WrapContents = false
+        };
 
-        ListBox listFiles = new ListBox() { Location = new Point(10, 90), Size = new Size(560, 200) };
-        Label lblStatus = new Label() { Text = "Ready.", Location = new Point(10, 300), AutoSize = true };
+        FlowLayoutPanel buttonRow = new FlowLayoutPanel()
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            WrapContents = false
+        };
 
-        this.Controls.Add(lblPassword);
-        this.Controls.Add(txtPassword);
-        this.Controls.Add(btnSelectFiles);
-        this.Controls.Add(btnEncrypt);
-        this.Controls.Add(btnDecrypt);
-        this.Controls.Add(listFiles);
-        this.Controls.Add(lblStatus);
+        Label lblPassword = new Label()
+        {
+            Text = "Password:",
+            AutoSize = true,
+            Margin = new Padding(5)
+        };
+
+        TextBox txtPassword = new TextBox()
+        {
+            Width = 400,
+            UseSystemPasswordChar = true,
+            Margin = new Padding(5)
+        };
+
+        Button btnSelectFiles = new Button()
+        {
+            Text = "📄 Select Files",
+            AutoSize = true,
+        };
+
+        Button btnSelectFolder = new Button()
+        {
+            Text = "📁 Select Folder",
+            AutoSize = true,
+        };
+
+        Button btnEncrypt = new Button()
+        {
+            Text = "🔐 Encrypt",
+            AutoSize = true,
+        };
+
+        Button btnDecrypt = new Button()
+        {
+            Text = "🔓 Decrypt",
+            AutoSize = true,
+        };
+
+        ListBox listFiles = new ListBox()
+        {
+            Width = 640,
+            Height = 200,
+            SelectionMode = SelectionMode.None,
+            Margin = new Padding(5)
+        };
+
+        ListBox statusFiles = new ListBox()
+        {
+            Width = 640,
+            Height = 200,
+            SelectionMode = SelectionMode.None,
+            Margin = new Padding(5)
+        };
+
+        Label lblStatus = new Label()
+        {
+            Text = "Ready.",
+            AutoSize = true,
+        };
+
+        mainPanel.Controls.Add(passwordRow);
+        passwordRow.Controls.Add(lblPassword);
+        passwordRow.Controls.Add(txtPassword);
+        mainPanel.Controls.Add(buttonRow);
+        buttonRow.Controls.Add(btnSelectFiles);
+        buttonRow.Controls.Add(btnSelectFolder);
+        buttonRow.Controls.Add(btnEncrypt);
+        buttonRow.Controls.Add(btnDecrypt);
+        mainPanel.Controls.Add(listFiles);
+        mainPanel.Controls.Add(statusFiles);
+        mainPanel.Controls.Add(lblStatus);
 
         List<string> selectedFiles = new();
 
@@ -47,7 +130,26 @@ public partial class MainWindow : Form
             {
                 selectedFiles.Clear();
                 listFiles.Items.Clear();
+                statusFiles.Items.Clear();
                 foreach (var file in ofd.FileNames)
+                {
+                    selectedFiles.Add(file);
+                    listFiles.Items.Add(file);
+                }
+            }
+        };
+
+        btnSelectFolder.Click += (s, e) =>
+        {
+            using FolderBrowserDialog fbd = new FolderBrowserDialog();
+            if (fbd.ShowDialog() == DialogResult.OK)
+            {
+                selectedFiles.Clear();
+                listFiles.Items.Clear();
+                statusFiles.Items.Clear();
+
+                var files = Encryption.GetAllFilesInFolder(fbd.SelectedPath);
+                foreach (var file in files)
                 {
                     selectedFiles.Add(file);
                     listFiles.Items.Add(file);
@@ -74,6 +176,7 @@ public partial class MainWindow : Form
                 try
                 {
                     Encryption.EncryptFileOverwrite(file, txtPassword.Text);
+                    statusFiles.Items.Add($"Encrypting: {file}");
                 }
                 catch (Exception ex)
                 {
@@ -81,7 +184,7 @@ public partial class MainWindow : Form
                     return;
                 }
             }
-
+            statusFiles.Items.Add("Encryption completed.");
             lblStatus.Text = "✅ Files encrypted.";
         };
 
@@ -99,6 +202,7 @@ public partial class MainWindow : Form
                 try
                 {
                     Encryption.DecryptFileOverwrite(file, txtPassword.Text);
+                    statusFiles.Items.Add($"Decrypting: {file}");
                 }
                 catch (Exception ex)
                 {
@@ -106,8 +210,10 @@ public partial class MainWindow : Form
                     return;
                 }
             }
-
+            statusFiles.Items.Add("Decryption completed.");
             lblStatus.Text = "✅ Files decrypted.";
         };
+        // Apply dark theme to the form and its controls
+        Style.ApplyDarkTheme(this);
     }
 }
