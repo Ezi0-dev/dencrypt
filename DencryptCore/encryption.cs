@@ -300,7 +300,8 @@ namespace DencryptCore
 
         public static void EncryptFolder(string folderPath, string password)
         {
-            var files = GetAllFilesInFolder(folderPath);
+            var files = Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories); // Get all files in the folder and subfolders
+
             foreach (string file in files)
             {
                 try
@@ -316,7 +317,8 @@ namespace DencryptCore
         
         public static void DecryptFolder(string folderPath, string password)
         {
-            var files = GetAllFilesInFolder(folderPath);
+            var files = Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories); 
+
             foreach (string file in files)
             {
                 try

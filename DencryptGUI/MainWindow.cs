@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using System.Drawing;
 using System.Collections.Generic;
 using System;
+using System.IO;
 
 public partial class MainWindow : Form
 {
@@ -36,13 +37,18 @@ public partial class MainWindow : Form
             WrapContents = false
         };
 
-        FlowLayoutPanel buttonRow = new FlowLayoutPanel()
+        TableLayoutPanel buttonRow = new TableLayoutPanel()
         {
-            FlowDirection = FlowDirection.LeftToRight,
+            ColumnCount = 4,
+            RowCount = 1,
             Dock = DockStyle.Fill,
             AutoSize = true,
-            WrapContents = false
+            Width = 640,
         };
+        buttonRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+        buttonRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+        buttonRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+        buttonRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
 
         Label lblPassword = new Label()
         {
@@ -61,13 +67,13 @@ public partial class MainWindow : Form
         Button btnSelectFiles = new Button()
         {
             Text = "📄 Select Files",
-            AutoSize = true,
+            AutoSize = false,
         };
 
         Button btnSelectFolder = new Button()
         {
-            Text = "📁 Select Folder",
-            AutoSize = true,
+            Text = "📁 Select Folder/s",
+            AutoSize = false,
         };
 
         Button btnEncrypt = new Button()
@@ -116,7 +122,25 @@ public partial class MainWindow : Form
         mainPanel.Controls.Add(statusFiles);
         mainPanel.Controls.Add(lblStatus);
 
+        buttonRow.Width = listFiles.Width;
+
+        btnSelectFolder.Dock = DockStyle.Fill;
+        btnEncrypt.Dock = DockStyle.Fill;
+        btnDecrypt.Dock = DockStyle.Fill;
+        btnSelectFiles.Dock = DockStyle.Fill;
+
         List<string> selectedFiles = new();
+        List<string> selectedFolders = new List<string>();
+
+        string selectedFolderPath = "";
+        bool isFolder = false;
+
+        
+
+        // btnEncrypt.Width = listFiles.Width;
+        // btnDecrypt.Width = listFiles.Width;
+        // btnSelectFolder.Width = listFiles.Width;
+        // btnSelectFiles.Width = listFiles.Width;
 
         btnSelectFiles.Click += (s, e) =>
         {
@@ -144,6 +168,9 @@ public partial class MainWindow : Form
             using FolderBrowserDialog fbd = new FolderBrowserDialog();
             if (fbd.ShowDialog() == DialogResult.OK)
             {
+                selectedFolderPath = fbd.SelectedPath;
+                isFolder = true;
+
                 selectedFiles.Clear();
                 listFiles.Items.Clear();
                 statusFiles.Items.Clear();
@@ -159,59 +186,95 @@ public partial class MainWindow : Form
 
         btnEncrypt.Click += (s, e) =>
         {
-            if (selectedFiles.Count == 0)
+            statusFiles.Items.Clear();
+            if (string.IsNullOrWhiteSpace(txtPassword.Text))
             {
-                lblStatus.Text = "❌ No files selected.";
+                lblStatus.Text = "❌ Enter a password.";
                 return;
             }
 
             if (!Encryption.IsPasswordStrong(txtPassword.Text))
             {
+                lblStatus.Font = new Font("Segoe UI", 10);
                 lblStatus.Text = "❌ Password too weak. Use at least 12 characters, with upper/lowercase, a digit, and a symbol.";
                 return;
             }
 
-            foreach (var file in selectedFiles)
+            try
             {
-                try
+                if (isFolder && Directory.Exists(selectedFolderPath))
                 {
-                    Encryption.EncryptFileOverwrite(file, txtPassword.Text);
-                    statusFiles.Items.Add($"Encrypting: {file}");
+                    Encryption.EncryptFolder(selectedFolderPath, txtPassword.Text);
+                    statusFiles.Items.Add($"Encrypting: {selectedFolderPath}");
                 }
-                catch (Exception ex)
+
+                else if (selectedFiles.Count > 0)
                 {
-                    lblStatus.Text = $"❌ Error: {ex.Message}";
+                    foreach (var file in selectedFiles)
+                    {
+                        Encryption.EncryptFileOverwrite(file, txtPassword.Text);
+                        statusFiles.Items.Add($"Encrypting: {file}");
+                    }
+                }
+
+                else
+                {
+                    lblStatus.Text = "❌ No files or folder selected.";
                     return;
                 }
+
+                statusFiles.Items.Add("Encryption completed.");
+                lblStatus.Font = new Font("Segoe UI", 15);
+                lblStatus.Text = "✅ Files encrypted.";
             }
-            statusFiles.Items.Add("Encryption completed.");
-            lblStatus.Text = "✅ Files encrypted.";
+            catch (Exception ex)
+            {
+                lblStatus.Text = $"❌ Error: {ex.Message}";
+                return;
+            }
+            
         };
 
 
         btnDecrypt.Click += (s, e) =>
         {
-            if (selectedFiles.Count == 0)
+            statusFiles.Items.Clear();
+            if (string.IsNullOrWhiteSpace(txtPassword.Text))
             {
-                lblStatus.Text = "❌ No files selected.";
+                lblStatus.Text = "❌ Enter a password.";
                 return;
             }
 
-            foreach (var file in selectedFiles)
+            try
             {
-                try
+                if (isFolder && Directory.Exists(selectedFolderPath))
                 {
-                    Encryption.DecryptFileOverwrite(file, txtPassword.Text);
-                    statusFiles.Items.Add($"Decrypting: {file}");
+                    Encryption.DecryptFolder(selectedFolderPath, txtPassword.Text);
+                    statusFiles.Items.Add($"Decrypting: {selectedFolderPath}");
                 }
-                catch (Exception ex)
+
+                else if (selectedFiles.Count > 0)
                 {
-                    lblStatus.Text = $"❌ Error: {ex.Message}";
+                    foreach (var file in selectedFiles)
+                    {
+                        Encryption.DecryptFileOverwrite(file, txtPassword.Text);
+                        statusFiles.Items.Add($"Decrypting: {file}");
+                    }
+                }
+
+                else
+                {
+                    lblStatus.Text = "❌ No files or folder selected.";
                     return;
                 }
+
+                statusFiles.Items.Add("Decryption completed.");
+                lblStatus.Text = "✅ Decryption complete.";
             }
-            statusFiles.Items.Add("Decryption completed.");
-            lblStatus.Text = "✅ Files decrypted.";
+            catch (Exception ex)
+            {
+                lblStatus.Text = $"❌ Error: {ex.Message}";
+            }
         };
         // Apply dark theme to the form and its controls
         Style.ApplyDarkTheme(this);

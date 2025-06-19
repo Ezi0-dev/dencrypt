@@ -40,6 +40,7 @@ namespace DencryptGUI
                 list.BackColor = Color.FromArgb(35, 35, 35);
                 list.ForeColor = Color.White;
                 list.BorderStyle = BorderStyle.None;
+                list.Font = new Font("Segoe UI", 10);
             }
 
             // Recursively apply to nested controls
