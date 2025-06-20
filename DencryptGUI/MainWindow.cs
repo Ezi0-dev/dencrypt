@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Collections.Generic;
 using System;
 using System.IO;
+using System.Threading.Tasks;
 
 public partial class MainWindow : Form
 {
@@ -59,7 +60,7 @@ public partial class MainWindow : Form
             Width = 640,
             Margin = new Padding(5),
             BackgroundColor = Color.FromArgb(40, 40, 40),
-            BarColor = Color.DeepSkyBlue
+            BarColor = Color.Indigo
         };
 
         Label lblPassword = new Label()
@@ -148,7 +149,7 @@ public partial class MainWindow : Form
         string selectedFolderPath = "";
         bool isFolder = false;
 
-        
+
 
         // btnEncrypt.Width = listFiles.Width;
         // btnDecrypt.Width = listFiles.Width;
@@ -197,7 +198,7 @@ public partial class MainWindow : Form
             }
         };
 
-        btnEncrypt.Click += (s, e) =>
+        btnEncrypt.Click += async (s, e) =>
         {
             statusFiles.Items.Clear();
             if (string.IsNullOrWhiteSpace(txtPassword.Text))
@@ -213,43 +214,70 @@ public partial class MainWindow : Form
                 return;
             }
 
-            try
+            progressBar.Value = 0;
+            progressBar.Maximum = isFolder ?
+                Directory.GetFiles(selectedFolderPath, "*", SearchOption.AllDirectories).Length :
+                selectedFiles.Count;
+
+            btnEncrypt.Enabled = false;
+            lblStatus.Text = "🔄 Encrypting...";
+
+            await Task.Run(() =>
             {
+                string[] filesToEncrypt;
+
                 if (isFolder && Directory.Exists(selectedFolderPath))
                 {
-                    Encryption.EncryptFolder(selectedFolderPath, txtPassword.Text);
-                    statusFiles.Items.Add($"Encrypting: {selectedFolderPath}");
+                    filesToEncrypt = Directory.GetFiles(selectedFolderPath, "*", SearchOption.AllDirectories);
                 }
 
                 else if (selectedFiles.Count > 0)
                 {
-                    foreach (var file in selectedFiles)
-                    {
-                        Encryption.EncryptFileOverwrite(file, txtPassword.Text);
-                        statusFiles.Items.Add($"Encrypting: {file}");
-                    }
+                    filesToEncrypt = selectedFiles.ToArray();
                 }
 
                 else
                 {
-                    lblStatus.Text = "❌ No files or folder selected.";
+                    Invoke(() => lblStatus.Text = "❌ No files or folder selected.");
                     return;
                 }
 
-                statusFiles.Items.Add("Encryption completed.");
-                lblStatus.Font = new Font("Segoe UI", 15);
-                lblStatus.Text = "✅ Files encrypted.";
+                Invoke(() =>
+                {
+                    progressBar.Maximum = filesToEncrypt.Length;
+                    statusFiles.Items.Add("🔐 Encrypting files...");
+                });
+
+                for (int i = 0; i < filesToEncrypt.Length; i++)
+                {
+                    string file = filesToEncrypt[i];
+                    try
+                    {
+                        Encryption.EncryptFileOverwrite(file, txtPassword.Text);
+                        Invoke(() => statusFiles.Items.Add($"✅ Encrypted: {file}"));
+                    }
+                    catch (Exception ex)
+                    {
+                        Invoke(() => statusFiles.Items.Add($"❌ Error encrypting {file}: {ex.Message}"));
+                    }
+
+                    Invoke(() => progressBar.Value = i + 1);
+                }
+
+                Invoke(() =>
+                {
+                    btnEncrypt.Enabled = true;
+                    statusFiles.Items.Add("Encryption completed (っ◔◡◔)っ");
+                    lblStatus.Font = new Font("Segoe UI", 15);
+                    lblStatus.Text = "✅ Files encrypted.";
+                });
+
             }
-            catch (Exception ex)
-            {
-                lblStatus.Text = $"❌ Error: {ex.Message}";
-                return;
-            }
-            
+            );
         };
 
 
-        btnDecrypt.Click += (s, e) =>
+        btnDecrypt.Click += async (s, e) =>
         {
             statusFiles.Items.Clear();
             if (string.IsNullOrWhiteSpace(txtPassword.Text))
@@ -258,38 +286,69 @@ public partial class MainWindow : Form
                 return;
             }
 
-            try
+            progressBar.Value = 0;
+            progressBar.Maximum = isFolder ?
+                Directory.GetFiles(selectedFolderPath, "*", SearchOption.AllDirectories).Length :
+                selectedFiles.Count;
+
+            btnDecrypt.Enabled = false;
+            lblStatus.Text = "🔄 Decrypting...";
+
+            await Task.Run(() =>
             {
+                string[] filesToDecrypt;
+
                 if (isFolder && Directory.Exists(selectedFolderPath))
                 {
-                    Encryption.DecryptFolder(selectedFolderPath, txtPassword.Text);
-                    statusFiles.Items.Add($"Decrypting: {selectedFolderPath}");
+                    filesToDecrypt = Directory.GetFiles(selectedFolderPath, "*", SearchOption.AllDirectories);
                 }
 
                 else if (selectedFiles.Count > 0)
                 {
-                    foreach (var file in selectedFiles)
-                    {
-                        Encryption.DecryptFileOverwrite(file, txtPassword.Text);
-                        statusFiles.Items.Add($"Decrypting: {file}");
-                    }
+                    filesToDecrypt = selectedFiles.ToArray();
                 }
 
                 else
                 {
-                    lblStatus.Text = "❌ No files or folder selected.";
+                    Invoke(() => lblStatus.Text = "❌ No files or folder selected.");
                     return;
                 }
 
-                statusFiles.Items.Add("Decryption completed.");
-                lblStatus.Text = "✅ Decryption complete.";
+                Invoke(() =>
+                {
+                    progressBar.Maximum = filesToDecrypt.Length;
+                    statusFiles.Items.Add("🔐 Decrypting files...");
+                });
+
+                for (int i = 0; i < filesToDecrypt.Length; i++)
+                {
+                    string file = filesToDecrypt[i];
+                    try
+                    {
+                        Encryption.DecryptFileOverwrite(file, txtPassword.Text);
+                        Invoke(() => statusFiles.Items.Add($"✅ Decrypted: {file}"));
+                    }
+                    catch (Exception ex)
+                    {
+                        Invoke(() => statusFiles.Items.Add($"❌ Error decrypting {file}: {ex.Message}"));
+                    }
+
+                    Invoke(() => progressBar.Value = i + 1);
+                }
+
+                Invoke(() =>
+                {
+                    btnDecrypt.Enabled = true;
+                    statusFiles.Items.Add("Decryption completed (っ◔◡◔)っ");
+                    lblStatus.Text = "✅ Files decrypted.";
+                });
+
             }
-            catch (Exception ex)
-            {
-                lblStatus.Text = $"❌ Error: {ex.Message}";
-            }
+            );
         };
         // Apply dark theme to the form and its controls
         Style.ApplyDarkTheme(this);
     }
 }
+
+// (っ◔◡◔)っ ♥ by Ezi0 ♥

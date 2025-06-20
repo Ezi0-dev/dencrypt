@@ -30,6 +30,19 @@ namespace DencryptCore
             long ciphertextStart;
             long ciphertextEnd;
 
+            byte[] headerBytes = Encoding.UTF8.GetBytes(header);
+    
+            // Prevents encrypting an already encrypted file
+            using (var fs = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read))
+            {
+                byte[] buffer = new byte[headerBytes.Length];
+                int read = fs.Read(buffer, 0, headerBytes.Length);
+                if (read == headerBytes.Length && Encoding.UTF8.GetString(buffer) == header)
+                {
+                    throw new Exception("File is already encrypted.");
+                }
+            }
+
             try
             {
                 using (FileStream fsIn = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read))
@@ -297,42 +310,9 @@ namespace DencryptCore
         {
             return Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories).ToList();
         }
-
-        public static void EncryptFolder(string folderPath, string password)
-        {
-            var files = Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories); // Get all files in the folder and subfolders
-
-            foreach (string file in files)
-            {
-                try
-                {
-                    EncryptFileOverwrite(file, password);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"❌ Error encrypting {file}: {ex.Message}");
-                }
-            }
-        }
-        
-        public static void DecryptFolder(string folderPath, string password)
-        {
-            var files = Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories); 
-
-            foreach (string file in files)
-            {
-                try
-                {
-                    DecryptFileOverwrite(file, password);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"❌ Error decrypting {file}: {ex.Message}");
-                }
-            }
-        }
     }
 }
 
 
 
+// (っ◔◡◔)っ ♥ by Ezi0 ♥
