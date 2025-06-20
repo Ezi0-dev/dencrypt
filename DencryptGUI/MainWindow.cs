@@ -50,6 +50,18 @@ public partial class MainWindow : Form
         buttonRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
         buttonRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
 
+        CustomProgressBar progressBar = new CustomProgressBar()
+        {
+            Minimum = 0,
+            Maximum = 100,
+            Value = 0,
+            Height = 20,
+            Width = 640,
+            Margin = new Padding(5),
+            BackgroundColor = Color.FromArgb(40, 40, 40),
+            BarColor = Color.DeepSkyBlue
+        };
+
         Label lblPassword = new Label()
         {
             Text = "Password:",
@@ -120,6 +132,7 @@ public partial class MainWindow : Form
         buttonRow.Controls.Add(btnDecrypt);
         mainPanel.Controls.Add(listFiles);
         mainPanel.Controls.Add(statusFiles);
+        mainPanel.Controls.Add(progressBar);
         mainPanel.Controls.Add(lblStatus);
 
         buttonRow.Width = listFiles.Width;
