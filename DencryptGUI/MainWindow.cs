@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using System.Linq;
 
 public partial class MainWindow : Form
 {
@@ -18,12 +19,12 @@ public partial class MainWindow : Form
         this.AutoSizeMode = AutoSizeMode.GrowAndShrink;
         this.FormBorderStyle = FormBorderStyle.FixedDialog;
         this.MaximizeBox = false;
+        this.Icon = new Icon("Assets/icon.ico");
 
         FlowLayoutPanel mainPanel = new FlowLayoutPanel()
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.TopDown,
             AutoScroll = true,
             Padding = new Padding(10),
@@ -44,12 +45,21 @@ public partial class MainWindow : Form
             RowCount = 1,
             Dock = DockStyle.Fill,
             AutoSize = true,
-            Width = 640,
         };
         buttonRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
         buttonRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
         buttonRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
         buttonRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+
+        TableLayoutPanel listRow = new TableLayoutPanel()
+        {
+            ColumnCount = 2,
+            RowCount = 2,
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+        };
+        listRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 75F));
+        listRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
 
         CustomProgressBar progressBar = new CustomProgressBar()
         {
@@ -57,8 +67,8 @@ public partial class MainWindow : Form
             Maximum = 100,
             Value = 0,
             Height = 20,
-            Width = 640,
-            Margin = new Padding(5),
+            Width = 900,
+            Dock = DockStyle.Fill,
             BackgroundColor = Color.FromArgb(40, 40, 40),
             BarColor = Color.Indigo
         };
@@ -85,7 +95,7 @@ public partial class MainWindow : Form
 
         Button btnSelectFolder = new Button()
         {
-            Text = "📁 Select Folder/s",
+            Text = "📁 Select Folders",
             AutoSize = false,
         };
 
@@ -101,18 +111,32 @@ public partial class MainWindow : Form
             AutoSize = true,
         };
 
+        Button btnDelete = new Button()
+        {
+            Text = "🗑 Delete selected items",
+            AutoSize = true,
+            Width = 500,
+        };
+
+        Button btnClear = new Button()
+        {
+            Text = "💥 Clear items",
+            AutoSize = true,
+            Width = 500,
+        };
+
         ListBox listFiles = new ListBox()
         {
-            Width = 640,
-            Height = 200,
-            SelectionMode = SelectionMode.None,
-            Margin = new Padding(5)
+            Width = 900,
+            Height = 400,
+            SelectionMode = SelectionMode.MultiExtended,
+            BackColor = Color.FromArgb(35, 35, 35) // Drag and drop becomes white if this is not defined
         };
 
         ListBox statusFiles = new ListBox()
         {
-            Width = 640,
-            Height = 200,
+            Width = 900,
+            Height = 300,
             SelectionMode = SelectionMode.None,
             Margin = new Padding(5)
         };
@@ -126,12 +150,20 @@ public partial class MainWindow : Form
         mainPanel.Controls.Add(passwordRow);
         passwordRow.Controls.Add(lblPassword);
         passwordRow.Controls.Add(txtPassword);
+
         mainPanel.Controls.Add(buttonRow);
         buttonRow.Controls.Add(btnSelectFiles);
         buttonRow.Controls.Add(btnSelectFolder);
         buttonRow.Controls.Add(btnEncrypt);
         buttonRow.Controls.Add(btnDecrypt);
-        mainPanel.Controls.Add(listFiles);
+
+        mainPanel.Controls.Add(listRow);
+        listRow.Controls.Add(listFiles);
+        listRow.SetRowSpan(listFiles, 2);
+        listRow.Controls.Add(btnDelete);
+        listRow.Controls.Add(btnClear);
+        listRow.Controls.Add(btnClear, 1, 1);  
+
         mainPanel.Controls.Add(statusFiles);
         mainPanel.Controls.Add(progressBar);
         mainPanel.Controls.Add(lblStatus);
@@ -149,12 +181,45 @@ public partial class MainWindow : Form
         string selectedFolderPath = "";
         bool isFolder = false;
 
+        listFiles.AllowDrop = true;
+        Color originalColor = listFiles.BackColor;
 
+        listFiles.DragEnter += (s, e) =>
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                e.Effect = DragDropEffects.Copy;
+                listFiles.BackColor = Color.FromArgb(50, 70, 100);
+            }
+        };
 
-        // btnEncrypt.Width = listFiles.Width;
-        // btnDecrypt.Width = listFiles.Width;
-        // btnSelectFolder.Width = listFiles.Width;
-        // btnSelectFiles.Width = listFiles.Width;
+        listFiles.DragLeave += (s, e) =>
+        {
+            listFiles.BackColor = originalColor;
+        };
+
+        listFiles.DragDrop += (s, e) =>
+        {
+            listFiles.BackColor = originalColor;
+
+            string[] paths = (string[])e.Data.GetData(DataFormats.FileDrop);
+
+            foreach (string path in paths)
+            {
+                if (Directory.Exists(path))
+                {
+                    selectedFiles.AddRange(Directory.GetFiles(path, "*", SearchOption.AllDirectories));
+                    isFolder = true;
+                    selectedFolderPath = path;
+                }
+                else if (File.Exists(path))
+                {
+                    selectedFiles.Add(path);
+                }
+
+                listFiles.Items.Add(path);
+            }
+        };
 
         btnSelectFiles.Click += (s, e) =>
         {
@@ -216,41 +281,32 @@ public partial class MainWindow : Form
 
             progressBar.Value = 0;
             progressBar.Maximum = isFolder ?
-                Directory.GetFiles(selectedFolderPath, "*", SearchOption.AllDirectories).Length :
-                selectedFiles.Count;
+            
+            Directory.GetFiles(selectedFolderPath, "*", SearchOption.AllDirectories).Length :
+            selectedFiles.Count;
 
             btnEncrypt.Enabled = false;
             lblStatus.Text = "🔄 Encrypting...";
 
             await Task.Run(() =>
             {
-                string[] filesToEncrypt;
-
-                if (isFolder && Directory.Exists(selectedFolderPath))
-                {
-                    filesToEncrypt = Directory.GetFiles(selectedFolderPath, "*", SearchOption.AllDirectories);
-                }
-
-                else if (selectedFiles.Count > 0)
-                {
-                    filesToEncrypt = selectedFiles.ToArray();
-                }
-
-                else
+                if (selectedFiles.Count == 0)
                 {
                     Invoke(() => lblStatus.Text = "❌ No files or folder selected.");
+                    btnEncrypt.Enabled = true;
                     return;
                 }
 
                 Invoke(() =>
                 {
-                    progressBar.Maximum = filesToEncrypt.Length;
+                    progressBar.Maximum = selectedFiles.Count;
                     statusFiles.Items.Add("🔐 Encrypting files...");
                 });
 
-                for (int i = 0; i < filesToEncrypt.Length; i++)
+                for (int i = 0; i < selectedFiles.Count; i++)
                 {
-                    string file = filesToEncrypt[i];
+                    string file = selectedFiles[i];
+
                     try
                     {
                         Encryption.EncryptFileOverwrite(file, txtPassword.Text);
@@ -276,7 +332,6 @@ public partial class MainWindow : Form
             );
         };
 
-
         btnDecrypt.Click += async (s, e) =>
         {
             statusFiles.Items.Clear();
@@ -296,19 +351,7 @@ public partial class MainWindow : Form
 
             await Task.Run(() =>
             {
-                string[] filesToDecrypt;
-
-                if (isFolder && Directory.Exists(selectedFolderPath))
-                {
-                    filesToDecrypt = Directory.GetFiles(selectedFolderPath, "*", SearchOption.AllDirectories);
-                }
-
-                else if (selectedFiles.Count > 0)
-                {
-                    filesToDecrypt = selectedFiles.ToArray();
-                }
-
-                else
+                if (selectedFiles.Count == 0)
                 {
                     Invoke(() => lblStatus.Text = "❌ No files or folder selected.");
                     return;
@@ -316,13 +359,13 @@ public partial class MainWindow : Form
 
                 Invoke(() =>
                 {
-                    progressBar.Maximum = filesToDecrypt.Length;
+                    progressBar.Maximum = selectedFiles.Count;
                     statusFiles.Items.Add("🔐 Decrypting files...");
                 });
 
-                for (int i = 0; i < filesToDecrypt.Length; i++)
+                for (int i = 0; i < selectedFiles.Count; i++)
                 {
-                    string file = filesToDecrypt[i];
+                    string file = selectedFiles[i];
                     try
                     {
                         Encryption.DecryptFileOverwrite(file, txtPassword.Text);
@@ -345,6 +388,35 @@ public partial class MainWindow : Form
 
             }
             );
+        };
+    
+        btnDelete.Click += (s, e) =>
+        {
+            var selectedItems = listFiles.SelectedItems.Cast<string>().ToList();
+
+            foreach (var item in selectedItems)
+            {
+                listFiles.Items.Remove(item);
+                selectedFiles.Remove(item);
+            }
+
+            if (listFiles.Items.Count == 0)
+            {
+                isFolder = false;
+                selectedFolderPath = "";
+            }
+        };
+
+        listFiles.KeyDown += (s, e) =>
+        {
+            if (e.KeyCode == Keys.Delete)
+                btnDelete.PerformClick();
+        };
+
+        btnClear.Click += (s, e) =>
+        {
+            selectedFiles.Clear();
+            listFiles.Items.Clear();
         };
         // Apply dark theme to the form and its controls
         Style.ApplyDarkTheme(this);
