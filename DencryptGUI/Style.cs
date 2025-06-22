@@ -40,14 +40,14 @@ namespace DencryptGUI
                 list.BackColor = Color.FromArgb(35, 35, 35);
                 list.ForeColor = Color.White;
                 list.BorderStyle = BorderStyle.None;
-                list.Font = new Font("Segoe UI", 10);
+                list.Font = new Font("Segoe UI", 14);
             }
             else if (control is ProgressBar progressBar)
             {
                 progressBar.BackColor = Color.FromArgb(200, 30, 30);
                 progressBar.ForeColor = Color.FromArgb(30, 200, 30);
                 progressBar.Style = ProgressBarStyle.Continuous;
-                progressBar.Height = 20;
+                progressBar.Height = 40;
                 progressBar.Width = 640;
                 progressBar.Margin = new Padding(5);
             }
