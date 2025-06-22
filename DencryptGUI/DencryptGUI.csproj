@@ -9,5 +9,9 @@
   <ItemGroup>
     <ProjectReference Include="..\DencryptCore\DencryptCore.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="..\assets\*" />
+  </ItemGroup>
+  
 
 </Project>
