@@ -125,6 +125,13 @@ public partial class MainWindow : Form
             Width = 500,
         };
 
+        Button btnShowPassword = new Button()
+        {
+            Text = "👁",
+            Margin = new Padding(5),
+            Dock = DockStyle.Fill,
+        };
+
         ListBox listFiles = new ListBox()
         {
             Width = 900,
@@ -150,6 +157,7 @@ public partial class MainWindow : Form
         mainPanel.Controls.Add(passwordRow);
         passwordRow.Controls.Add(lblPassword);
         passwordRow.Controls.Add(txtPassword);
+        passwordRow.Controls.Add(btnShowPassword);
 
         mainPanel.Controls.Add(buttonRow);
         buttonRow.Controls.Add(btnSelectFiles);
@@ -417,6 +425,12 @@ public partial class MainWindow : Form
         {
             selectedFiles.Clear();
             listFiles.Items.Clear();
+        };
+
+        btnShowPassword.Click += (s, e) =>
+        {
+            txtPassword.UseSystemPasswordChar = !txtPassword.UseSystemPasswordChar;
+            btnShowPassword.Text = txtPassword.UseSystemPasswordChar ? "👁" : "❌";
         };
         // Apply dark theme to the form and its controls
         Style.ApplyDarkTheme(this);
