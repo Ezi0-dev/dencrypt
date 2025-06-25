@@ -140,13 +140,19 @@ public partial class MainWindow : Form
             BackColor = Color.FromArgb(35, 35, 35) // Drag and drop becomes white if this is not defined
         };
 
-        ListBox statusFiles = new ListBox()
+        ListView statusFiles = new ListView()
         {
+            View = View.Details,
             Width = 900,
             Height = 300,
-            SelectionMode = SelectionMode.None,
+            GridLines = false,
+            FullRowSelect = true,
             Margin = new Padding(5)
         };
+
+        Style.ApplyListViewStyle(statusFiles);
+        statusFiles.Columns.Add("Time", 200);
+        statusFiles.Columns.Add("Status", 700);
 
         Label lblStatus = new Label()
         {
@@ -318,11 +324,11 @@ public partial class MainWindow : Form
                     try
                     {
                         Encryption.EncryptFileOverwrite(file, txtPassword.Text);
-                        Invoke(() => statusFiles.Items.Add($"✅ Encrypted: {file}"));
+                        Invoke(() => addStatus($"✅ Encrypted: {file}", Color.Green));
                     }
                     catch (Exception ex)
                     {
-                        Invoke(() => statusFiles.Items.Add($"❌ Error encrypting {file}: {ex.Message}"));
+                        Invoke(() => addStatus($"❌ Error encrypting {file}: {ex.Message}", Color.Red));
                     }
 
                     Invoke(() => progressBar.Value = i + 1);
@@ -377,11 +383,11 @@ public partial class MainWindow : Form
                     try
                     {
                         Encryption.DecryptFileOverwrite(file, txtPassword.Text);
-                        Invoke(() => statusFiles.Items.Add($"✅ Decrypted: {file}"));
+                        Invoke(() => addStatus($"✅ Decrypted: {file}", Color.Green));
                     }
                     catch (Exception ex)
                     {
-                        Invoke(() => statusFiles.Items.Add($"❌ Error decrypting {file}: {ex.Message}"));
+                        Invoke(() => addStatus($"❌ Error decrypting {file}: {ex.Message}", Color.Red));
                     }
 
                     Invoke(() => progressBar.Value = i + 1);
@@ -397,6 +403,14 @@ public partial class MainWindow : Form
             }
             );
         };
+
+        void addStatus(string message, Color color)
+        {
+            ListViewItem item = new ListViewItem(DateTime.Now.ToString("HH:mm:ss"));
+            item.SubItems.Add(message);
+            item.ForeColor = color;
+            statusFiles.Items.Add(item);
+        }
     
         btnDelete.Click += (s, e) =>
         {
@@ -432,6 +446,9 @@ public partial class MainWindow : Form
             txtPassword.UseSystemPasswordChar = !txtPassword.UseSystemPasswordChar;
             btnShowPassword.Text = txtPassword.UseSystemPasswordChar ? "👁" : "❌";
         };
+
+
+
         // Apply dark theme to the form and its controls
         Style.ApplyDarkTheme(this);
     }
