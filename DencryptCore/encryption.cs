@@ -9,8 +9,12 @@ namespace DencryptCore
 {
     public static class Encryption
     {
-        public static void EncryptFileOverwrite(string inputFilePath, string password)
+        public delegate void LogHandler(string message);
+        public static void EncryptFileOverwrite(string inputFilePath, string password, LogHandler log = null)
         {
+            log ??= _ => { };
+            log("Starting encryption...");
+
             const string header = "DENCRYPT01";
             const int saltLength = 16;
             const string encryptedExtension = ".enc";
@@ -22,6 +26,7 @@ namespace DencryptCore
             byte extLength = (byte)extBytes.Length;
 
             // Generates SHA256 of the original file to verify that its the same after decryption
+            log("Computing SHA256 hash of original file...");
             using (var sha = SHA256.Create())
             using (var fs = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read))
             {
@@ -32,14 +37,16 @@ namespace DencryptCore
             byte[] salt = GenerateRandomBytes(saltLength);
 
             // Derive keys
+            log("Deriving keys from password...");
             (aesKey, aesIV, hmacKey) = DeriveKeysFromPassword(password, salt);
 
             long ciphertextStart;
             long ciphertextEnd;
 
             byte[] headerBytes = Encoding.UTF8.GetBytes(header);
-    
+
             // Prevents encrypting an already encrypted file
+            log("Checking if file is already encrypted...");
             using (var fs = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read))
             {
                 byte[] buffer = new byte[headerBytes.Length];
@@ -61,7 +68,8 @@ namespace DencryptCore
                     aes.Padding = PaddingMode.PKCS7;
                     // Default CBC + PKCS7 padding
 
-                    Console.WriteLine($"Encrypting file..." + inputFilePath);
+                    Console.WriteLine($"Encrypting file : " + inputFilePath);
+                    log($"Encrypting file : " + inputFilePath);
 
                     // -- Starts writing data --
 
@@ -85,7 +93,7 @@ namespace DencryptCore
                     }
                     fsOut.Write(fileHash, 0, fileHash.Length); // Writes SHA256
                 }
-                
+
                 // Ciphertext fully written
                 // Get the entire written content for HMAC and Ensure data is flushed to disk
                 // Computes HMAC and Appends it.
@@ -101,13 +109,15 @@ namespace DencryptCore
                     fsOutAppend.Write(hmac, 0, hmac.Length);
                 }
 
-                // All streams closed, temp file structure = [salt|IV|Cipher|HMAC]
+                // All streams closed, temp file structure = [salt|IV|Cipher|HMAC] - old
                 // Replace original, might add backup system just in case.
 
+                log("Replacing original file with encrypted file...");
                 File.Delete(inputFilePath);         // Delete original file
                 File.Move(tempFile, Path.ChangeExtension(inputFilePath, encryptedExtension)); // Rename temp file to original name
 
                 Console.WriteLine("File encrypted.");
+                log("File encrypted successfully.");
             }
             finally
             {
@@ -116,8 +126,11 @@ namespace DencryptCore
                 Array.Clear(hmacKey, 0, hmacKey.Length);
             }
         }
-        public static void DecryptFileOverwrite(string inputFilePath, string password)
+        public static void DecryptFileOverwrite(string inputFilePath, string password, LogHandler log = null)
         {
+            log ??= _ => { };
+            log("Starting decryption...");
+
             const int saltLength = 16;
             const int ivLength = 16;
             const int hmacLength = 32;
@@ -125,8 +138,9 @@ namespace DencryptCore
             string expectedHeader = "DENCRYPT01"; // Better
             int headerLength = expectedHeader.Length;
 
-            byte[] salt, iv, storedHmac, computedHmac;  
+            byte[] salt, iv, storedHmac, computedHmac;
             byte[] aesKey, aesIV, hmacKey;
+            byte[] storedHash;
 
             string tempOutputPath = inputFilePath + ".dec";
             string finalOutputPath;
@@ -149,6 +163,7 @@ namespace DencryptCore
                 int readHeader = fsIn.Read(headerBytes, 0, headerLength);
                 if (readHeader != headerLength || Encoding.UTF8.GetString(headerBytes) != expectedHeader)
                 {
+                    log("File too small to be valid encrypted data.");
                     throw new Exception("❌ Invalid file header.");
                 }
 
@@ -188,10 +203,10 @@ namespace DencryptCore
                     hmac.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
                     computedHmac = hmac.Hash;
                 }
-                
+
                 // 5.1. Read stored SHA256
-                fsIn.Seek(headerLength + saltLength + ivLength + cipherLength, SeekOrigin.Begin);
-                byte[] storedHash = ReadExact(fsIn, hashLength, "SHA256 Hash");
+                fsIn.Seek(cipherStart + cipherLength, SeekOrigin.Begin);
+                storedHash = ReadExact(fsIn, hashLength, "SHA256 Hash");
 
                 // 6. Read stored HMAC
                 fsIn.Seek(totalLength - hmacLength, SeekOrigin.Begin);
@@ -199,16 +214,21 @@ namespace DencryptCore
 
                 // 6.1 Constant time comparison
                 if (!ByteArraysEqualConstantTime(computedHmac, storedHmac))
+                {
+                    log("❌ HMAC mismatch: wrong password or corrupted file. Decryption aborted, original file left intact.");
                     throw new Exception("❌ HMAC mismatch: wrong password or corrupted file. Decryption aborted, original file left intact.");
+                }
             }
 
             // 7. If HMAC is OK -> decrypt to temp, using substream
-
+            log("HMAC OK. Starting decryption...");
             try
             {
                 using (FileStream fsDecrypt = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
                     fsDecrypt.Seek(cipherStart, SeekOrigin.Begin);
+
+                    log($"Decrypting file : {inputFilePath}");
 
                     using (SubStream cipherStream = new SubStream(fsDecrypt, cipherStart, cipherLength))
                     using (FileStream fsOut = new FileStream(tempOutputPath, FileMode.Create, FileAccess.Write))
@@ -223,16 +243,20 @@ namespace DencryptCore
                             csDecrypt.CopyTo(fsOut);
                         }
                     }
+
+                    log("Decryption complete.");
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                log($"Exception during decryption : {ex.Message}");
                 if (File.Exists(tempOutputPath))
                     File.Delete(tempOutputPath);
                 throw;
             }
 
             // Compute SHA256 hash 
+            log("Computing SHA256 hash of decrypted file...");
             byte[] decryptedHash;
             using (var sha = SHA256.Create())
             using (var fs = new FileStream(tempOutputPath, FileMode.Open, FileAccess.Read))
@@ -240,13 +264,25 @@ namespace DencryptCore
                 decryptedHash = sha.ComputeHash(fs);
             }
 
+            // SHA256 verification feedback
+            log("Comparing SHA256 hashes...");
+            if (!ByteArraysEqualConstantTime(decryptedHash, storedHash))
+            {
+                log("❌ SHA256 hash mismatch: Decrypted file integrity check failed.");
+                if (File.Exists(tempOutputPath))
+                    File.Delete(tempOutputPath);
+                throw new Exception("❌ SHA256 hash mismatch: Decrypted file integrity check failed.");
+            }
+
             // All Done. Close streams.
             // 8. Replace original encrypted file with decrypted file
+            log("SHA256 OK. Replacing original file...");
             finalOutputPath = Path.ChangeExtension(inputFilePath, originalExtension);
             File.Delete(inputFilePath);
             File.Move(tempOutputPath, finalOutputPath);
 
             Console.WriteLine("File decrypted.");
+            log("File decrypted successfully.");
 
             // 9. Zero out sensitive data
             Array.Clear(aesKey, 0, aesKey.Length);
@@ -331,6 +367,15 @@ namespace DencryptCore
         public static List<string> GetAllFilesInFolder(string folderPath)
         {
             return Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories).ToList();
+        }
+        
+        public static LogHandler CreateFileLogger(string logFilePath)
+        {
+            return msg =>
+            {
+                var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {msg}{Environment.NewLine}";
+                File.AppendAllText(logFilePath, line);
+            };
         }
     }
 }
