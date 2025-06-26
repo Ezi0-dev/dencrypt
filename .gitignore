@@ -13,6 +13,7 @@
 x64/
 [Bb]in/
 [Oo]bj/
+dencrypt_log.txt
 
 # MSTest test Results
 [Tt]est[Rr]esult*/
