@@ -16,10 +16,17 @@ namespace DencryptCore
             const string encryptedExtension = ".enc";
             string tempFile = Path.ChangeExtension(inputFilePath, encryptedExtension);
 
-            byte[] aesKey, aesIV, hmacKey;
+            byte[] aesKey, aesIV, hmacKey, fileHash;
             string fileExtension = Path.GetExtension(inputFilePath).TrimStart('.');
             byte[] extBytes = Encoding.UTF8.GetBytes(fileExtension);
             byte extLength = (byte)extBytes.Length;
+
+            // Generates SHA256 of the original file to verify that its the same after decryption
+            using (var sha = SHA256.Create())
+            using (var fs = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read))
+            {
+                fileHash = sha.ComputeHash(fs); // 32 bytes
+            }
 
             // Generates salt
             byte[] salt = GenerateRandomBytes(saltLength);
@@ -76,8 +83,9 @@ namespace DencryptCore
                         }
                         csEncrypt.FlushFinalBlock();
                     }
+                    fsOut.Write(fileHash, 0, fileHash.Length); // Writes SHA256
                 }
-
+                
                 // Ciphertext fully written
                 // Get the entire written content for HMAC and Ensure data is flushed to disk
                 // Computes HMAC and Appends it.
@@ -113,10 +121,11 @@ namespace DencryptCore
             const int saltLength = 16;
             const int ivLength = 16;
             const int hmacLength = 32;
+            const int hashLength = 32;
             string expectedHeader = "DENCRYPT01"; // Better
             int headerLength = expectedHeader.Length;
 
-            byte[] salt, iv, storedHmac, computedHmac;
+            byte[] salt, iv, storedHmac, computedHmac;  
             byte[] aesKey, aesIV, hmacKey;
 
             string tempOutputPath = inputFilePath + ".dec";
@@ -158,7 +167,7 @@ namespace DencryptCore
 
                 // 4. Compute ciphertext length
                 cipherStart = headerLength + 1 + extLength + saltLength + ivLength;
-                cipherLength = totalLength - cipherStart - hmacLength;
+                cipherLength = totalLength - cipherStart - hashLength - hmacLength;
 
                 // 5. Verify HMAC, compute it over salt+IV+ciphertext
                 // Seek back to start then reads salt+IV+ciphertext
@@ -179,6 +188,10 @@ namespace DencryptCore
                     hmac.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
                     computedHmac = hmac.Hash;
                 }
+                
+                // 5.1. Read stored SHA256
+                fsIn.Seek(headerLength + saltLength + ivLength + cipherLength, SeekOrigin.Begin);
+                byte[] storedHash = ReadExact(fsIn, hashLength, "SHA256 Hash");
 
                 // 6. Read stored HMAC
                 fsIn.Seek(totalLength - hmacLength, SeekOrigin.Begin);
@@ -191,31 +204,40 @@ namespace DencryptCore
 
             // 7. If HMAC is OK -> decrypt to temp, using substream
 
-            using (FileStream fsDecrypt = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read, FileShare.None))
+            try
             {
-                fsDecrypt.Seek(cipherStart, SeekOrigin.Begin);
-                using (SubStream cipherStream = new SubStream(fsDecrypt, cipherStart, cipherLength))
-                using (FileStream fsOut = new FileStream(tempOutputPath, FileMode.Create, FileAccess.Write))
-                using (Aes aes = Aes.Create())
+                using (FileStream fsDecrypt = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
-                    aes.Key = aesKey;
-                    aes.IV = aesIV;
-                    aes.Padding = PaddingMode.PKCS7;
+                    fsDecrypt.Seek(cipherStart, SeekOrigin.Begin);
 
-                    try
+                    using (SubStream cipherStream = new SubStream(fsDecrypt, cipherStart, cipherLength))
+                    using (FileStream fsOut = new FileStream(tempOutputPath, FileMode.Create, FileAccess.Write))
+                    using (Aes aes = Aes.Create())
                     {
+                        aes.Key = aesKey;
+                        aes.IV = aesIV;
+                        aes.Padding = PaddingMode.PKCS7;
+
                         using (CryptoStream csDecrypt = new CryptoStream(cipherStream, aes.CreateDecryptor(), CryptoStreamMode.Read))
                         {
-                            csDecrypt.CopyTo(fsOut); // Nice
+                            csDecrypt.CopyTo(fsOut);
                         }
                     }
-                    catch (Exception)
-                    {
-                        if (File.Exists(tempOutputPath))
-                            File.Delete(tempOutputPath);
-                        throw;
-                    }
                 }
+            }
+            catch
+            {
+                if (File.Exists(tempOutputPath))
+                    File.Delete(tempOutputPath);
+                throw;
+            }
+
+            // Compute SHA256 hash 
+            byte[] decryptedHash;
+            using (var sha = SHA256.Create())
+            using (var fs = new FileStream(tempOutputPath, FileMode.Open, FileAccess.Read))
+            {
+                decryptedHash = sha.ComputeHash(fs);
             }
 
             // All Done. Close streams.

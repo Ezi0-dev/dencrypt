@@ -368,6 +368,7 @@ public partial class MainWindow : Form
                 if (selectedFiles.Count == 0)
                 {
                     Invoke(() => lblStatus.Text = "❌ No files or folder selected.");
+                    btnDecrypt.Enabled = true;
                     return;
                 }
 

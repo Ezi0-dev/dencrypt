@@ -70,7 +70,7 @@ namespace DencryptGUI
             listView.OwnerDraw = true;
             listView.FullRowSelect = true;
             listView.BorderStyle = BorderStyle.None;
-            listView.Font = new Font("Segoe UI", 9);
+            listView.Font = new Font("Segoe UI", 11);
             listView.ForeColor = Color.White;
             listView.BackColor = Color.FromArgb(20, 20, 20);
 
@@ -83,27 +83,39 @@ namespace DencryptGUI
                 TextRenderer.DrawText(e.Graphics, e.Header.Text, e.Font, e.Bounds, Color.White, TextFormatFlags.Left);
             };
 
+            listView.DrawItem += (s, e) =>
+            {
+                // Required but empty for Details view (we draw subitems below)
+            };
+
             listView.DrawSubItem += (s, e) =>
             {
                 bool isSelected = e.Item.Selected;
+                string text = e.SubItem.Text;
+                var font = listView.Font;
+                var bounds = e.Bounds;
 
-                // Background color
+                // Background
                 Color bgColor = isSelected
-                    ? Color.FromArgb(60, 60, 100) // selection highlight
+                    ? Color.FromArgb(60, 60, 100)
                     : listView.BackColor;
 
-                using SolidBrush bgBrush = new SolidBrush(bgColor);
-                e.Graphics.FillRectangle(bgBrush, e.Bounds);
+                using var bgBrush = new SolidBrush(bgColor);
+                e.Graphics.FillRectangle(bgBrush, bounds);
 
-                // Text
-                TextRenderer.DrawText(
-                    e.Graphics,
-                    e.SubItem.Text,
-                    listView.Font,
-                    e.Bounds,
-                    e.Item.ForeColor,
-                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter
-                );
+                // Measure and update row height
+                
+                var flags = TextFormatFlags.Left | TextFormatFlags.WordBreak;
+                var needed = TextRenderer.MeasureText(text, font, bounds.Size, flags);
+
+                if (listView.SmallImageList == null || listView.SmallImageList.ImageSize.Height < needed.Height)
+                {
+                    // Manually update item height using a trick:
+                    listView.SmallImageList = new ImageList() { ImageSize = new Size(1, needed.Height) };
+                }
+
+                // Draw wrapped text
+                TextRenderer.DrawText(e.Graphics, text, font, bounds, e.Item.ForeColor, flags);
             };
         }
     }
