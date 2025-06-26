@@ -316,14 +316,24 @@ public partial class MainWindow : Form
                     progressBar.Maximum = selectedFiles.Count;
                     statusFiles.Items.Add("🔐 Encrypting files...");
                 });
+                
+                // Logger 
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string projectRoot = Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\.."));
+                string logDirectory = Path.Combine(projectRoot, "logs");
+                Directory.CreateDirectory(logDirectory);
+                string logFilePath = Path.Combine(logDirectory, "dencrypt_log.txt");
+                File.WriteAllText(logFilePath, ""); // Clears logs 
+                var logger = Encryption.CreateFileLogger(logFilePath);
 
                 for (int i = 0; i < selectedFiles.Count; i++)
                 {
+
                     string file = selectedFiles[i];
 
                     try
                     {
-                        Encryption.EncryptFileOverwrite(file, txtPassword.Text);
+                        Encryption.EncryptFileOverwrite(file, txtPassword.Text, logger);
                         Invoke(() => addStatus($"✅ Encrypted: {file}", Color.Green));
                     }
                     catch (Exception ex)
@@ -378,12 +388,23 @@ public partial class MainWindow : Form
                     statusFiles.Items.Add("🔐 Decrypting files...");
                 });
 
+                // Logger 
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string projectRoot = Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\.."));
+                string logDirectory = Path.Combine(projectRoot, "logs");
+                Directory.CreateDirectory(logDirectory);
+                string logFilePath = Path.Combine(logDirectory, "dencrypt_log.txt");
+                File.WriteAllText(logFilePath, ""); // Clears logs 
+                var logger = Encryption.CreateFileLogger(logFilePath);
+
                 for (int i = 0; i < selectedFiles.Count; i++)
                 {
+
                     string file = selectedFiles[i];
+
                     try
                     {
-                        Encryption.DecryptFileOverwrite(file, txtPassword.Text);
+                        Encryption.DecryptFileOverwrite(file, txtPassword.Text, logger);
                         Invoke(() => addStatus($"✅ Decrypted: {file}", Color.Green));
                     }
                     catch (Exception ex)
