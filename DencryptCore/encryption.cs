@@ -342,13 +342,28 @@ namespace DencryptCore
             return bytes;
         }
 
-        public static bool IsPasswordStrong(string password)
+        public enum PasswordStrength
         {
-            return password.Length >= 12 &&
-                   password.Any(char.IsUpper) &&
-                   password.Any(char.IsLower) &&
-                   password.Any(char.IsDigit) &&
-                   password.Any(ch => !char.IsLetterOrDigit(ch));
+            VeryWeak, Weak, Medium, Strong, VeryStrong
+        }
+
+        public static PasswordStrength EvaluateStrength(string password)
+        {
+            int score = 0;
+            if (password.Length >= 8) score++;
+            if (password.Any(char.IsLower)) score++;
+            if (password.Any(char.IsUpper)) score++;
+            if (password.Any(char.IsDigit)) score++;
+            if (password.Any(ch => !char.IsLetterOrDigit(ch))) score++;
+
+            return score switch
+            {
+                <= 1 => PasswordStrength.VeryWeak,
+                2 => PasswordStrength.Weak,
+                3 => PasswordStrength.Medium,
+                4 => PasswordStrength.Strong,
+                _ => PasswordStrength.VeryStrong,
+            };
         }
 
         public static byte[] ComputeHmacOverStream(Stream stream, byte[] hmacKey)
