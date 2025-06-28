@@ -7,6 +7,8 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Linq;
+using System.Windows.Forms.VisualStyles;
+using System.Drawing.Text;
 
 public partial class MainWindow : Form
 {
@@ -32,11 +34,20 @@ public partial class MainWindow : Form
         };
         this.Controls.Add(mainPanel);
 
-        FlowLayoutPanel passwordRow = new FlowLayoutPanel()
+        TableLayoutPanel topPanel = new TableLayoutPanel()
         {
-            FlowDirection = FlowDirection.LeftToRight,
+            ColumnCount = 2,
+            RowCount = 1,
             AutoSize = true,
-            WrapContents = false
+            Dock = DockStyle.Top,
+        };
+
+        TableLayoutPanel passwordRow = new TableLayoutPanel()
+        {
+            ColumnCount = 4,
+            RowCount = 2,
+            Anchor = AnchorStyles.Left,
+            AutoSize = true,
         };
 
         TableLayoutPanel buttonRow = new TableLayoutPanel()
@@ -85,6 +96,24 @@ public partial class MainWindow : Form
             Width = 400,
             UseSystemPasswordChar = true,
             Margin = new Padding(5)
+        };
+
+        Panel strengthBar = new Panel()
+        {
+            Name = "strengthBar",
+            Height = 5,
+            Width = txtPassword.Width,
+            BackColor = Color.FromArgb(40, 40, 40),
+            Margin = new Padding(5),
+        };
+
+        PictureBox gifBox = new PictureBox()
+        {
+            Image = Image.FromFile("Assets/bee.gif"),
+            Size = new Size(80, 80),
+            SizeMode = PictureBoxSizeMode.Zoom,
+            Anchor = AnchorStyles.Right,
+            Margin = new Padding(5),
         };
 
         Button btnSelectFiles = new Button()
@@ -160,10 +189,17 @@ public partial class MainWindow : Form
             AutoSize = true,
         };
 
-        mainPanel.Controls.Add(passwordRow);
+        mainPanel.Controls.Add(topPanel);
+        topPanel.Controls.Add(passwordRow);
+        topPanel.Controls.Add(gifBox);
         passwordRow.Controls.Add(lblPassword);
         passwordRow.Controls.Add(txtPassword);
+        passwordRow.SetColumnSpan(txtPassword, 2);
         passwordRow.Controls.Add(btnShowPassword);
+        passwordRow.Controls.Add(strengthBar, 1, 1);
+        passwordRow.SetColumnSpan(strengthBar, 2);
+
+        txtPassword.TextChanged += passwordCheck;
 
         mainPanel.Controls.Add(buttonRow);
         buttonRow.Controls.Add(btnSelectFiles);
@@ -183,7 +219,7 @@ public partial class MainWindow : Form
         mainPanel.Controls.Add(lblStatus);
 
         buttonRow.Width = listFiles.Width;
-
+        
         btnSelectFolder.Dock = DockStyle.Fill;
         btnEncrypt.Dock = DockStyle.Fill;
         btnDecrypt.Dock = DockStyle.Fill;
@@ -286,13 +322,6 @@ public partial class MainWindow : Form
                 return;
             }
 
-            if (!Encryption.IsPasswordStrong(txtPassword.Text))
-            {
-                lblStatus.Font = new Font("Segoe UI", 10);
-                lblStatus.Text = "❌ Password too weak. Use at least 12 characters, with upper/lowercase, a digit, and a symbol.";
-                return;
-            }
-
             progressBar.Value = 0;
             progressBar.Maximum = isFolder ?
             
@@ -314,7 +343,7 @@ public partial class MainWindow : Form
                 Invoke(() =>
                 {
                     progressBar.Maximum = selectedFiles.Count;
-                    statusFiles.Items.Add("🔐 Encrypting files...");
+                    addStatus("🔐 Encrypting files...", Color.White);
                 });
                 
                 // Logger 
@@ -347,7 +376,7 @@ public partial class MainWindow : Form
                 Invoke(() =>
                 {
                     btnEncrypt.Enabled = true;
-                    statusFiles.Items.Add("Encryption completed (っ◔◡◔)っ");
+                    addStatus("Encryption completed (っ◔◡◔)っ", Color.White);
                     lblStatus.Font = new Font("Segoe UI", 15);
                     lblStatus.Text = "✅ Files encrypted.";
                 });
@@ -385,7 +414,7 @@ public partial class MainWindow : Form
                 Invoke(() =>
                 {
                     progressBar.Maximum = selectedFiles.Count;
-                    statusFiles.Items.Add("🔐 Decrypting files...");
+                    addStatus("🔐 Decrypting files...", Color.White);
                 });
 
                 // Logger 
@@ -418,7 +447,7 @@ public partial class MainWindow : Form
                 Invoke(() =>
                 {
                     btnDecrypt.Enabled = true;
-                    statusFiles.Items.Add("Decryption completed (っ◔◡◔)っ");
+                    addStatus("Decryption completed (っ◔◡◔)っ", Color.White);
                     lblStatus.Text = "✅ Files decrypted.";
                 });
 
@@ -432,8 +461,27 @@ public partial class MainWindow : Form
             item.SubItems.Add(message);
             item.ForeColor = color;
             statusFiles.Items.Add(item);
+        };
+
+        void passwordCheck(object sender, EventArgs e)
+        {
+            string password = ((TextBox)sender).Text;
+            Encryption.PasswordStrength strength = Encryption.EvaluateStrength(password);
+
+            Panel strengthBar = Controls.Find("strengthBar", true).FirstOrDefault() as Panel;
+            if (strengthBar == null) return;
+
+            strengthBar.BackColor = strength switch
+            {
+                Encryption.PasswordStrength.VeryWeak => Color.DarkRed,
+                Encryption.PasswordStrength.Weak => Color.Red,
+                Encryption.PasswordStrength.Medium => Color.Orange,
+                Encryption.PasswordStrength.Strong => Color.YellowGreen,
+                Encryption.PasswordStrength.VeryStrong => Color.Green,
+                _ => Color.FromArgb(40, 40, 40)
+            };
         }
-    
+
         btnDelete.Click += (s, e) =>
         {
             var selectedItems = listFiles.SelectedItems.Cast<string>().ToList();
@@ -468,8 +516,6 @@ public partial class MainWindow : Form
             txtPassword.UseSystemPasswordChar = !txtPassword.UseSystemPasswordChar;
             btnShowPassword.Text = txtPassword.UseSystemPasswordChar ? "👁" : "❌";
         };
-
-
 
         // Apply dark theme to the form and its controls
         Style.ApplyDarkTheme(this);
