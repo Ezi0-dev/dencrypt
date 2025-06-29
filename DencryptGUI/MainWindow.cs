@@ -65,7 +65,7 @@ public partial class MainWindow : Form
         TableLayoutPanel listRow = new TableLayoutPanel()
         {
             ColumnCount = 2,
-            RowCount = 2,
+            RowCount = 3,
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
@@ -154,6 +154,14 @@ public partial class MainWindow : Form
             Width = 500,
         };
 
+        Button btnShowLogs = new Button()
+        {
+            Text = "📃 Show logs",
+            AutoSize = true,
+            Width = 500,
+            Anchor = AnchorStyles.Bottom
+        };
+
         Button btnShowPassword = new Button()
         {
             Text = "👁",
@@ -176,12 +184,12 @@ public partial class MainWindow : Form
             Height = 300,
             GridLines = false,
             FullRowSelect = true,
-            Margin = new Padding(5)
+            Margin = new Padding(5),
         };
 
         Style.ApplyListViewStyle(statusFiles);
-        statusFiles.Columns.Add("Time", 200);
-        statusFiles.Columns.Add("Status", 700);
+        statusFiles.Columns.Add("Time", 100);
+        statusFiles.Columns.Add("Status", 800);
 
         Label lblStatus = new Label()
         {
@@ -200,6 +208,8 @@ public partial class MainWindow : Form
         passwordRow.SetColumnSpan(strengthBar, 2);
 
         txtPassword.TextChanged += passwordCheck;
+        gifBox.Click += secretPopup;
+        btnShowLogs.Click += showLogs;
 
         mainPanel.Controls.Add(buttonRow);
         buttonRow.Controls.Add(btnSelectFiles);
@@ -209,10 +219,26 @@ public partial class MainWindow : Form
 
         mainPanel.Controls.Add(listRow);
         listRow.Controls.Add(listFiles);
-        listRow.SetRowSpan(listFiles, 2);
+        listRow.SetRowSpan(listFiles, 3);
         listRow.Controls.Add(btnDelete);
         listRow.Controls.Add(btnClear);
-        listRow.Controls.Add(btnClear, 1, 1);  
+        listRow.Controls.Add(btnClear, 1, 1);
+        listRow.Controls.Add(btnShowLogs, 2, 1);
+
+        void UpdateStatusColumnWidth() // It must look nice idc
+        {
+            int widest = 800;
+
+            foreach (ListViewItem item in statusFiles.Items)
+            {
+                int textWidth = TextRenderer.MeasureText(item.SubItems[1].Text, statusFiles.Font).Width;
+                if (textWidth > widest)
+                    widest = textWidth;
+            }
+
+            // Make sure it’s wider than the visible area to trigger horizontal scroll
+            statusFiles.Columns[1].Width = Math.Max(widest + 20, statusFiles.ClientSize.Width - 200);
+        }
 
         mainPanel.Controls.Add(statusFiles);
         mainPanel.Controls.Add(progressBar);
@@ -375,6 +401,7 @@ public partial class MainWindow : Form
 
                 Invoke(() =>
                 {
+                    UpdateStatusColumnWidth();
                     btnEncrypt.Enabled = true;
                     addStatus("Encryption completed (っ◔◡◔)っ", Color.White);
                     lblStatus.Font = new Font("Segoe UI", 15);
@@ -446,6 +473,7 @@ public partial class MainWindow : Form
 
                 Invoke(() =>
                 {
+                    UpdateStatusColumnWidth();
                     btnDecrypt.Enabled = true;
                     addStatus("Decryption completed (っ◔◡◔)っ", Color.White);
                     lblStatus.Text = "✅ Files decrypted.";
@@ -480,6 +508,84 @@ public partial class MainWindow : Form
                 Encryption.PasswordStrength.VeryStrong => Color.Green,
                 _ => Color.FromArgb(40, 40, 40)
             };
+        }
+
+        void showLogs(object sender, EventArgs e)
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string projectRoot = Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\.."));
+            string logDirectory = Path.Combine(projectRoot, "logs");
+            string logFilePath = Path.Combine(logDirectory, "dencrypt_log.txt");
+
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = logFilePath,
+                UseShellExecute = true // required for .NET Core and modern Windows
+            });
+        }
+
+        void secretPopup(object sender, EventArgs e)
+        {
+            Form customPopup = new Form()
+            {
+                Text = "pls star on github :)))",
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterParent,
+                Size = new Size(300, 300),
+                BackColor = Color.FromArgb(30, 30, 30),
+                ForeColor = Color.White,
+                Font = new Font("Consolas", 16),
+                Padding = new Padding(10),
+                ShowInTaskbar = false,
+                MaximizeBox = false
+            };
+
+
+            PictureBox pfp = new PictureBox()
+            {
+                Dock = DockStyle.Top,
+                Image = Image.FromFile("Assets/ezio.png"),
+                Size = new Size(200, 200),
+                SizeMode = PictureBoxSizeMode.Zoom,
+                Padding = new Padding(5)
+            };
+
+
+            LinkLabel message = new LinkLabel()
+            {
+                Text = "Made by Ezi0",
+                Dock = DockStyle.Top,
+                TextAlign = System.Drawing.ContentAlignment.MiddleCenter,
+                LinkColor = Color.White,
+            };
+            message.Links.Add(8, 4, "https://github.com/Ezi0-dev");
+
+            message.LinkClicked += (sender, e) =>
+            {
+                string url = e.Link.LinkData as string;
+                if (!string.IsNullOrEmpty(url))
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = url,
+                        UseShellExecute = true // required for .NET Core and modern Windows
+                    });
+                }
+            };
+
+            Label thanks = new Label()
+            {
+                Text = "Thanks for downloading!",
+                Font = new Font("Consolas", 10),
+                Dock = DockStyle.Top,
+                TextAlign = System.Drawing.ContentAlignment.MiddleCenter
+            };
+
+            customPopup.Controls.Add(thanks);
+            customPopup.Controls.Add(message);
+            customPopup.Controls.Add(pfp);
+
+            customPopup.ShowDialog();
         }
 
         btnDelete.Click += (s, e) =>
