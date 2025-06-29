@@ -13,7 +13,7 @@ namespace DencryptCore
         public static void EncryptFileOverwrite(string inputFilePath, string password, LogHandler log = null)
         {
             log ??= _ => { };
-            log("Starting encryption...");
+            log($"[START] -- Starting encryption of : {inputFilePath}");
 
             const string header = "DENCRYPT01";
             const int saltLength = 16;
@@ -69,7 +69,7 @@ namespace DencryptCore
                     // Default CBC + PKCS7 padding
 
                     Console.WriteLine($"Encrypting file : " + inputFilePath);
-                    log($"Encrypting file : " + inputFilePath);
+                    log("Encrypting file...");
 
                     // -- Starts writing data --
 
@@ -117,7 +117,7 @@ namespace DencryptCore
                 File.Move(tempFile, Path.ChangeExtension(inputFilePath, encryptedExtension)); // Rename temp file to original name
 
                 Console.WriteLine("File encrypted.");
-                log("File encrypted successfully.");
+                log("[DONE] -- File encrypted successfully. ");
             }
             finally
             {
@@ -129,7 +129,7 @@ namespace DencryptCore
         public static void DecryptFileOverwrite(string inputFilePath, string password, LogHandler log = null)
         {
             log ??= _ => { };
-            log("Starting decryption...");
+            log($"[START] -- Starting decryption of : {inputFilePath}");
 
             const int saltLength = 16;
             const int ivLength = 16;
@@ -228,7 +228,7 @@ namespace DencryptCore
                 {
                     fsDecrypt.Seek(cipherStart, SeekOrigin.Begin);
 
-                    log($"Decrypting file : {inputFilePath}");
+                    log("Decrypting file...");
 
                     using (SubStream cipherStream = new SubStream(fsDecrypt, cipherStart, cipherLength))
                     using (FileStream fsOut = new FileStream(tempOutputPath, FileMode.Create, FileAccess.Write))
@@ -243,8 +243,6 @@ namespace DencryptCore
                             csDecrypt.CopyTo(fsOut);
                         }
                     }
-
-                    log("Decryption complete.");
                 }
             }
             catch (Exception ex)
@@ -282,7 +280,7 @@ namespace DencryptCore
             File.Move(tempOutputPath, finalOutputPath);
 
             Console.WriteLine("File decrypted.");
-            log("File decrypted successfully.");
+            log("[DONE] -- File decrypted successfully.");
 
             // 9. Zero out sensitive data
             Array.Clear(aesKey, 0, aesKey.Length);
