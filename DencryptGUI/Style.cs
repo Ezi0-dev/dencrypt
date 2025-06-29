@@ -54,7 +54,7 @@ namespace DencryptGUI
                 progressBar.BackColor = Color.FromArgb(200, 30, 30);
                 progressBar.ForeColor = Color.FromArgb(30, 200, 30);
                 progressBar.Style = ProgressBarStyle.Continuous;
-                progressBar.Height = 40;
+                progressBar.Height = 30;
                 progressBar.Width = 640;
                 progressBar.Margin = new Padding(5);
             }
@@ -70,7 +70,7 @@ namespace DencryptGUI
             listView.OwnerDraw = true;
             listView.FullRowSelect = true;
             listView.BorderStyle = BorderStyle.None;
-            listView.Font = new Font("Segoe UI", 11);
+            listView.Font = new Font("Segoe UI", 12);
             listView.ForeColor = Color.White;
             listView.BackColor = Color.FromArgb(20, 20, 20);
 
@@ -104,14 +104,11 @@ namespace DencryptGUI
                 e.Graphics.FillRectangle(bgBrush, bounds);
 
                 // Measure and update row height
-                
-                var flags = TextFormatFlags.Left | TextFormatFlags.WordBreak;
-                var needed = TextRenderer.MeasureText(text, font, bounds.Size, flags);
+                var flags = TextFormatFlags.Left | TextFormatFlags.SingleLine | TextFormatFlags.NoClipping | TextFormatFlags.VerticalCenter;
 
-                if (listView.SmallImageList == null || listView.SmallImageList.ImageSize.Height < needed.Height)
+                if (listView.SmallImageList == null)
                 {
-                    // Manually update item height using a trick:
-                    listView.SmallImageList = new ImageList() { ImageSize = new Size(1, needed.Height) };
+                    listView.SmallImageList = new ImageList() { ImageSize = new Size(1, 22) }; // Set your fixed row height
                 }
 
                 // Draw wrapped text
