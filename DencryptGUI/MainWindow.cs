@@ -197,6 +197,15 @@ public partial class MainWindow : Form
             AutoSize = true,
         };
 
+        Label fileCounter = new Label
+        {
+            Text = "",
+            AutoSize = true,
+            ForeColor = Color.White,
+            Font = new Font("Segoe UI", 14),
+            Anchor = AnchorStyles.Left,
+        };
+
         mainPanel.Controls.Add(topPanel);
         topPanel.Controls.Add(passwordRow);
         topPanel.Controls.Add(gifBox);
@@ -243,6 +252,7 @@ public partial class MainWindow : Form
         mainPanel.Controls.Add(statusFiles);
         mainPanel.Controls.Add(progressBar);
         mainPanel.Controls.Add(lblStatus);
+        mainPanel.Controls.Add(fileCounter);
 
         buttonRow.Width = listFiles.Width;
         
@@ -256,6 +266,7 @@ public partial class MainWindow : Form
 
         string selectedFolderPath = "";
         bool isFolder = false;
+        bool isEncrypting = true;
 
         listFiles.AllowDrop = true;
         Color originalColor = listFiles.BackColor;
@@ -355,6 +366,7 @@ public partial class MainWindow : Form
             selectedFiles.Count;
 
             btnEncrypt.Enabled = false;
+            isEncrypting = true;
             lblStatus.Text = "🔄 Encrypting...";
 
             await Task.Run(() =>
@@ -397,6 +409,9 @@ public partial class MainWindow : Form
                     }
 
                     Invoke(() => progressBar.Value = i + 1);
+
+                    string verb = isEncrypting ? "encrypted" : "decrypted";
+                    fileCounter.Text = $"Files {verb}: {i + 1}/{selectedFiles.Count}";
                 }
 
                 Invoke(() =>
@@ -427,6 +442,7 @@ public partial class MainWindow : Form
                 selectedFiles.Count;
 
             btnDecrypt.Enabled = false;
+            isEncrypting = false;
             lblStatus.Text = "🔄 Decrypting...";
 
             await Task.Run(() =>
@@ -469,6 +485,9 @@ public partial class MainWindow : Form
                     }
 
                     Invoke(() => progressBar.Value = i + 1);
+
+                    string verb = isEncrypting ? "encrypted" : "decrypted";
+                    fileCounter.Text = $"Files {verb}: {i + 1}/{selectedFiles.Count}";
                 }
 
                 Invoke(() =>
