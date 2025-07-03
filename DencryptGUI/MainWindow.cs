@@ -53,7 +53,7 @@ public partial class MainWindow : Form
         TableLayoutPanel buttonRow = new TableLayoutPanel()
         {
             ColumnCount = 4,
-            RowCount = 1,
+            RowCount = 2,
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
@@ -61,6 +61,16 @@ public partial class MainWindow : Form
         buttonRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
         buttonRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
         buttonRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+
+        TableLayoutPanel vaultRow = new TableLayoutPanel()
+        {
+            ColumnCount = 2,
+            RowCount = 1,
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+        };
+        vaultRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+        vaultRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
 
         TableLayoutPanel listRow = new TableLayoutPanel()
         {
@@ -137,6 +147,18 @@ public partial class MainWindow : Form
         Button btnDecrypt = new Button()
         {
             Text = "🔓 Decrypt",
+            AutoSize = true,
+        };
+
+        Button btnCreateVault = new Button()
+        {
+            Text = "Create Vault",
+            AutoSize = true,
+        };
+
+        Button btnExtractVault = new Button()
+        {
+            Text = "Extract Vault",
             AutoSize = true,
         };
 
@@ -225,7 +247,10 @@ public partial class MainWindow : Form
         buttonRow.Controls.Add(btnSelectFolder);
         buttonRow.Controls.Add(btnEncrypt);
         buttonRow.Controls.Add(btnDecrypt);
-
+        mainPanel.Controls.Add(vaultRow);
+        vaultRow.Controls.Add(btnCreateVault);
+        vaultRow.Controls.Add(btnExtractVault);
+        
         mainPanel.Controls.Add(listRow);
         listRow.Controls.Add(listFiles);
         listRow.SetRowSpan(listFiles, 3);
@@ -260,6 +285,8 @@ public partial class MainWindow : Form
         btnEncrypt.Dock = DockStyle.Fill;
         btnDecrypt.Dock = DockStyle.Fill;
         btnSelectFiles.Dock = DockStyle.Fill;
+        btnCreateVault.Dock = DockStyle.Fill;
+        btnExtractVault.Dock = DockStyle.Fill;
 
         List<string> selectedFiles = new();
         List<string> selectedFolders = new List<string>();
@@ -501,6 +528,186 @@ public partial class MainWindow : Form
             }
             );
         };
+
+        btnCreateVault.Click += async (s, e) =>
+        {
+            statusFiles.Items.Clear();
+            if (string.IsNullOrWhiteSpace(txtPassword.Text))
+            {
+                lblStatus.Text = "❌ Enter a password.";
+                return;
+            }
+
+            progressBar.Value = 0;
+            progressBar.Maximum = isFolder ?
+
+            Directory.GetFiles(selectedFolderPath, "*", SearchOption.AllDirectories).Length :
+            selectedFiles.Count;
+
+            using SaveFileDialog outputVaultPath = new SaveFileDialog();
+            outputVaultPath.Filter = "Vault Files (*.vault)|*.vault";
+            outputVaultPath.Title = "Save your Vault as...";
+            outputVaultPath.FileName = "MyVault.vault";
+
+            string savePath = outputVaultPath.FileName;
+            string password = txtPassword.Text;
+
+            btnCreateVault.Enabled = false;
+            isEncrypting = true;
+            lblStatus.Text = "🔄 Creating Vault...";
+
+            if (outputVaultPath.ShowDialog() == DialogResult.OK)
+            {
+                await Task.Run(() =>
+                {
+                    if (selectedFiles.Count == 0)
+                    {
+                        Invoke(() => lblStatus.Text = "❌ No files or folder selected.");
+                        btnExtractVault.Enabled = true;
+                        return;
+                    }
+
+                    Invoke(() =>
+                    {
+                        progressBar.Maximum = selectedFiles.Count;
+                        addStatus("🔐 Creating Vault...", Color.White);
+                    });
+
+                    // Logger 
+                    string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                    string projectRoot = Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\.."));
+                    string logDirectory = Path.Combine(projectRoot, "logs");
+                    Directory.CreateDirectory(logDirectory);
+                    string logFilePath = Path.Combine(logDirectory, "dencrypt_log.txt");
+                    File.WriteAllText(logFilePath, ""); // Clears logs 
+                    var logger = Encryption.CreateFileLogger(logFilePath);
+
+                    for (int i = 0; i < selectedFiles.Count; i++)
+                    {
+
+                        string file = selectedFiles[i];
+
+                        if (!File.Exists(file))
+                        {
+                            Invoke(() => addStatus($"✅ Encrypted: {file}", Color.Green));
+                            continue;
+                        }
+
+                        Invoke(() => progressBar.Value = i + 1);
+
+                        fileCounter.Text = $"Files added to vault: {i + 1}/{selectedFiles.Count}";
+                    }
+
+                    try
+                    {
+                        Vault.CreatVault(selectedFiles, outputVaultPath.FileName, txtPassword.Text, logger);
+                        Invoke(() => addStatus($"✅ Vault created: {outputVaultPath.FileName}", Color.Green));
+                    }
+                    catch (Exception ex)
+                    {
+                        Invoke(() => addStatus($"❌ Failed to create vault: {ex.Message}", Color.Red));
+                    }
+                });
+
+                Invoke(() =>
+                {
+                    UpdateStatusColumnWidth();
+                    btnCreateVault.Enabled = true;
+                    addStatus("Vault creation completed (っ◔◡◔)っ", Color.White);
+                    lblStatus.Text = "✅ Done.";
+                });
+            }
+        }; 
+
+        btnExtractVault.Click += async (s, e) =>
+        {
+            statusFiles.Items.Clear();
+            if (string.IsNullOrWhiteSpace(txtPassword.Text))
+            {
+                lblStatus.Text = "❌ Enter a password.";
+                return;
+            }
+
+            progressBar.Value = 0;
+            progressBar.Maximum = isFolder ?
+
+            Directory.GetFiles(selectedFolderPath, "*", SearchOption.AllDirectories).Length :
+            selectedFiles.Count;
+
+            using SaveFileDialog outputVaultPath = new SaveFileDialog();
+            outputVaultPath.Filter = "Vault Files (*.vault)|*.vault";
+            outputVaultPath.Title = "Save your Vault as...";
+            outputVaultPath.FileName = "MyVault.vault";
+
+            string savePath = outputVaultPath.FileName;
+            string password = txtPassword.Text;
+
+            btnExtractVault.Enabled = false;
+            isEncrypting = true;
+            lblStatus.Text = "🔄 Creating Vault...";
+
+            if (outputVaultPath.ShowDialog() == DialogResult.OK)
+            {
+                await Task.Run(() =>
+                {
+                    if (selectedFiles.Count == 0)
+                    {
+                        Invoke(() => lblStatus.Text = "❌ No files or folder selected.");
+                        btnExtractVault.Enabled = true;
+                        return;
+                    }
+
+                    Invoke(() =>
+                    {
+                        progressBar.Maximum = selectedFiles.Count;
+                        addStatus("🔐 Extracting Vault...", Color.White);
+                    });
+
+                    // Logger 
+                    string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                    string projectRoot = Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\.."));
+                    string logDirectory = Path.Combine(projectRoot, "logs");
+                    Directory.CreateDirectory(logDirectory);
+                    string logFilePath = Path.Combine(logDirectory, "dencrypt_log.txt");
+                    File.WriteAllText(logFilePath, ""); // Clears logs 
+                    var logger = Encryption.CreateFileLogger(logFilePath);
+
+                    for (int i = 0; i < selectedFiles.Count; i++)
+                    {
+
+                        string file = selectedFiles[i];
+
+                        if (!File.Exists(file))
+                        {
+                            Invoke(() => addStatus($"✅ Extracted: {file}", Color.Green));
+                            continue;
+                        }
+
+                        Invoke(() => progressBar.Value = i + 1);
+
+                        fileCounter.Text = $"Files extracted from vault: {i + 1}/{selectedFiles.Count}";
+                    }
+
+                    try
+                    {
+                        Vault.ExtractVault(selectedFiles, outputVaultPath.FileName, txtPassword.Text, logger);
+                        Invoke(() => addStatus($"✅ Vault extracted: {outputVaultPath.FileName}", Color.Green));
+                    }
+                    catch (Exception ex)
+                    {
+                        Invoke(() => addStatus($"❌ Failed to extract vault: {ex.Message}", Color.Red));
+                    }
+                });
+
+                Invoke(() =>
+                {
+                    UpdateStatusColumnWidth();
+                    btnExtractVault.Enabled = true;
+                    addStatus("Vault extraction completed (っ◔◡◔)っ", Color.White);
+                    lblStatus.Text = "✅ Done.";
+                });
+            }
+        }; 
 
         void addStatus(string message, Color color)
         {
