@@ -368,12 +368,8 @@ public partial class MainWindow : Form
                 listFiles.Items.Clear();
                 statusFiles.Items.Clear();
 
-                var files = Encryption.GetAllFilesInFolder(fbd.SelectedPath);
-                foreach (var file in files)
-                {
-                    selectedFiles.Add(file);
-                    listFiles.Items.Add(file);
-                }
+                selectedFiles.Add(fbd.SelectedPath);
+                listFiles.Items.Add(fbd.SelectedPath);
             }
         };
 
