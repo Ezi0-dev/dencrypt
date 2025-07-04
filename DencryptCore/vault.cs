@@ -1,6 +1,8 @@
 using System.IO;
 using System.Collections.Generic;
 using System.IO.Compression;
+using System;
+using System.Text;
 
 namespace DencryptCore
 {
@@ -8,7 +10,7 @@ namespace DencryptCore
     {
         private const string VaultExtension = ".vault";
 
-        public static void CreatVault(List<string> filePaths, string outputVaultPath, string password, Encryption.LogHandler log = null)
+        public static void CreateVault(List<string> filePaths, string outputVaultPath, string password, Encryption.LogHandler log = null)
         {
             log ??= _ => { };
             log($"[VAULT] Creating vault: {outputVaultPath}");
@@ -17,7 +19,7 @@ namespace DencryptCore
                 outputVaultPath += VaultExtension;
 
             // 1. ZIP everything into a tempfile
-            string tempZip = Path.GetTempFileName();
+            string tempZip = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".vault");
             using (FileStream fs = new FileStream(tempZip, FileMode.Create))
             using (ZipArchive archive = new ZipArchive(fs, ZipArchiveMode.Create))
             {
@@ -50,27 +52,61 @@ namespace DencryptCore
             if (!File.Exists(vaultPath))
                 throw new FileNotFoundException("Vault file not found", vaultPath);
 
+            if (!IsValidVaultFile(vaultPath))
+                throw new Exception("❌ Not a valid .vault file.");
+
             // 1. Decrypt .vault to tempZip
-            string tempEncrypted = vaultPath;
-            string tempZip = Path.GetTempFileName();
-            File.Copy(tempEncrypted, tempZip + ".enc", overwrite: true);
-            Encryption.DecryptFileOverwrite(tempZip + ".enc", password, log);
+            string tempZipPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".zip");
 
-            // 2. Excract ZIP to otuputDir
-            string finalZip = Path.ChangeExtension(tempZip + ".enc", null);
-            using (ZipArchive archive = ZipFile.OpenRead(finalZip))
+            Encryption.DecryptFileOverwrite(vaultPath, password, log);
+
+            // 2. Rename decrypted output (which has original extension .zip)
+            string zipPath = Path.ChangeExtension(vaultPath, ".zip");
+            File.Move(zipPath, tempZipPath, overwrite: true);
+
+            // 3. Extract zip
+            ZipFile.ExtractToDirectory(tempZipPath, outputDir);
+
+            log($"[VAULT] Extracted to: {outputDir}");
+            
+            // 4. Clean up
+            File.Delete(tempZipPath);
+        }
+
+        public static bool IsValidVaultFile(string filePath)
+        {
+            const string expectedHeader = "DENCRYPT01";
+            const string expectedExtension = "vault";
+
+            if (!File.Exists(filePath)) return false;
+            if (!filePath.EndsWith(".vault", StringComparison.OrdinalIgnoreCase)) return false;
+
+            try
             {
-                foreach (var entry in archive.Entries)
-                {
-                    string outPath = Path.Combine(outputDir, entry.FullName);
-                    Directory.CreateDirectory(Path.GetDirectoryName(outPath));
-                    entry.ExtractToFile(outPath, overwrite: true);
-                    log($"[VAULT] Extracted: {entry.FullName}");
-                }
-            }
-            File.Delete(finalZip);
+                using FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read);
 
-            log($"[VAULT] Extraction complete to: {outputDir}");
+                // 1. Read header
+                byte[] headerBytes = Encryption.ReadExact(fs, expectedHeader.Length, "Header");
+                string header = Encoding.UTF8.GetString(headerBytes);
+                if (header != expectedHeader)
+                    return false;
+
+                // 2. Read extension length (1 byte)
+                int extLength = fs.ReadByte();
+                if (extLength <= 0 || extLength > 20)
+                    return false;
+
+                // 3. Read extension 
+                byte[] extBytes = Encryption.ReadExact(fs, extLength, "Extension");
+                string extension = Encoding.UTF8.GetString(extBytes);
+                return extension == expectedExtension;
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }
