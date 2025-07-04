@@ -96,7 +96,7 @@ namespace DencryptCore
 
                 // Ciphertext fully written
                 // Get the entire written content for HMAC and Ensure data is flushed to disk
-                // Computes HMAC and Appends it.
+                // Computes HMAC
                 byte[] hmac;
                 using (FileStream fsOutForHmac = new FileStream(tempFile, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
