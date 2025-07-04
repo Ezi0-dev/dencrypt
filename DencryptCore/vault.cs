@@ -23,12 +23,27 @@ namespace DencryptCore
             using (FileStream fs = new FileStream(tempZip, FileMode.Create))
             using (ZipArchive archive = new ZipArchive(fs, ZipArchiveMode.Create))
             {
-                foreach (string file in filePaths)
+                foreach (string path in filePaths)
                 {
-                    if (!File.Exists(file)) continue;
-                    string entryName = Path.GetFileName(file);
-                    archive.CreateEntryFromFile(file, entryName);
-                    log($"[VAULT] Added to vault: {entryName}");
+                    if (File.Exists(path))
+                    {
+                        // Files
+                        string entryName = Path.GetFileName(path);
+                        archive.CreateEntryFromFile(path, entryName);
+                        log($"[VAULT] Added to vault: {entryName}");
+                    }
+                    else if (Directory.Exists(path))
+                    {
+                        // Folders - with subfolders hopefully O_O
+                        var allFiles = Directory.GetFiles(path, "*", SearchOption.AllDirectories);
+                        foreach (string file in allFiles)
+                        {
+                            string relativePath = Path.GetRelativePath(path, file);
+                            archive.CreateEntryFromFile(file, relativePath);
+                            log($"[VAULT] Added from folder: {relativePath}");
+                        }
+                    }
+                    
                 }
             }
 
@@ -53,24 +68,41 @@ namespace DencryptCore
                 throw new FileNotFoundException("Vault file not found", vaultPath);
 
             if (!IsValidVaultFile(vaultPath))
-                throw new Exception("❌ Not a valid .vault file.");
+                throw new Exception("❌ Not a valid Dencrypt Vault File.");
 
-            // 1. Decrypt .vault to tempZip
+            
             string tempZipPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".zip");
 
-            Encryption.DecryptFileOverwrite(vaultPath, password, log);
+            try
+            {
+                // 1. Decrypt vault → temp zip
+                Encryption.DecryptFileOverwrite(vaultPath, password, log);
 
-            // 2. Rename decrypted output (which has original extension .zip)
-            string zipPath = Path.ChangeExtension(vaultPath, ".zip");
-            File.Move(zipPath, tempZipPath, overwrite: true);
+                string decryptedPath = Path.ChangeExtension(vaultPath, ".zip");
+                File.Move(decryptedPath, tempZipPath);
 
-            // 3. Extract zip
-            ZipFile.ExtractToDirectory(tempZipPath, outputDir);
+                log("Vault decrypted to temp ZIP.");
 
+                // 2. Extract zip into folder chosen through GUI
+                ZipFile.ExtractToDirectory(tempZipPath, outputDir);
+            }
+            catch (Exception ex)
+            {
+                log($"❌ Vault extraction failed: {ex.Message}");
+
+                // Clean up temporary files if they exist
+                if (File.Exists(tempZipPath))
+                    File.Delete(tempZipPath);
+
+                throw; // Lets GUI display the error
+            }
+            finally
+            {
+                // More cleanup
+                if (File.Exists(tempZipPath))
+                    File.Delete(tempZipPath);
+            }
             log($"[VAULT] Extracted to: {outputDir}");
-            
-            // 4. Clean up
-            File.Delete(tempZipPath);
         }
 
         public static bool IsValidVaultFile(string filePath)
