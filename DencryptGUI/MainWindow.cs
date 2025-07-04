@@ -563,7 +563,7 @@ public partial class MainWindow : Form
                     if (selectedFiles.Count == 0)
                     {
                         Invoke(() => lblStatus.Text = "❌ No files or folder selected.");
-                        btnExtractVault.Enabled = true;
+                        btnCreateVault.Enabled = true;
                         return;
                     }
 
@@ -600,7 +600,7 @@ public partial class MainWindow : Form
 
                     try
                     {
-                        Vault.CreatVault(selectedFiles, outputVaultPath.FileName, txtPassword.Text, logger);
+                        Vault.CreateVault(selectedFiles, outputVaultPath.FileName, txtPassword.Text, logger);
                         Invoke(() => addStatus($"✅ Vault created: {outputVaultPath.FileName}", Color.Green));
                     }
                     catch (Exception ex)
@@ -617,7 +617,7 @@ public partial class MainWindow : Form
                     lblStatus.Text = "✅ Done.";
                 });
             }
-        }; 
+        };
 
         btnExtractVault.Click += async (s, e) =>
         {
@@ -634,19 +634,16 @@ public partial class MainWindow : Form
             Directory.GetFiles(selectedFolderPath, "*", SearchOption.AllDirectories).Length :
             selectedFiles.Count;
 
-            using SaveFileDialog outputVaultPath = new SaveFileDialog();
-            outputVaultPath.Filter = "Vault Files (*.vault)|*.vault";
-            outputVaultPath.Title = "Save your Vault as...";
-            outputVaultPath.FileName = "MyVault.vault";
-
-            string savePath = outputVaultPath.FileName;
             string password = txtPassword.Text;
 
             btnExtractVault.Enabled = false;
             isEncrypting = true;
-            lblStatus.Text = "🔄 Creating Vault...";
+            lblStatus.Text = "🔄 Extracting files from Vault...";
 
-            if (outputVaultPath.ShowDialog() == DialogResult.OK)
+            using FolderBrowserDialog outputDir = new FolderBrowserDialog();
+            outputDir.Description = "Extract vault to...";
+
+            if (outputDir.ShowDialog() == DialogResult.OK)
             {
                 await Task.Run(() =>
                 {
@@ -690,8 +687,11 @@ public partial class MainWindow : Form
 
                     try
                     {
-                        Vault.ExtractVault(selectedFiles, outputVaultPath.FileName, txtPassword.Text, logger);
-                        Invoke(() => addStatus($"✅ Vault extracted: {outputVaultPath.FileName}", Color.Green));
+                        foreach (var vaultFile in selectedFiles)
+                        {
+                            Vault.ExtractVault(vaultFile, outputDir.SelectedPath, txtPassword.Text, logger);
+                        }
+                        Invoke(() => addStatus($"✅ Vault extracted: {outputDir.SelectedPath}", Color.Green));
                     }
                     catch (Exception ex)
                     {
@@ -707,7 +707,7 @@ public partial class MainWindow : Form
                     lblStatus.Text = "✅ Done.";
                 });
             }
-        }; 
+        };
 
         void addStatus(string message, Color color)
         {
