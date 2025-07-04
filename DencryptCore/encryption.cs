@@ -173,6 +173,10 @@ namespace DencryptCore
                 byte[] extBytes = ReadExact(fsIn, extLength, "Extension");
                 originalExtension = Encoding.UTF8.GetString(extBytes);
 
+                // Treat .vault as .zip internally
+                if (originalExtension == "vault")
+                    originalExtension = "zip";
+
                 // 2. Reads the Salt and IV
                 salt = ReadExact(fsIn, saltLength, "Salt");
                 iv = ReadExact(fsIn, ivLength, "IV");
