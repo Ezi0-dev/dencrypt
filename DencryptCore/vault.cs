@@ -35,10 +35,12 @@ namespace DencryptCore
                     else if (Directory.Exists(path))
                     {
                         // Folders - with subfolders hopefully O_O
+                        string baseFolderName = Path.GetFileName(path);
                         var allFiles = Directory.GetFiles(path, "*", SearchOption.AllDirectories);
                         foreach (string file in allFiles)
                         {
-                            string relativePath = Path.GetRelativePath(path, file);
+                            // Adds selected folder to the vault, (before it deleted the selected folder but kept the subfolders.)
+                            string relativePath = Path.Combine(baseFolderName, Path.GetRelativePath(path, file));
                             archive.CreateEntryFromFile(file, relativePath);
                             log($"[VAULT] Added from folder: {relativePath}");
                         }
