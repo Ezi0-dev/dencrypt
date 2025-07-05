@@ -51,10 +51,34 @@ namespace DencryptCore
             string encryptedPath = Path.ChangeExtension(outputVaultPath, ".vault");
             Encryption.EncryptFileOverwrite(tempZip, password, log);
 
-            //3. Change name of the temp from .enc to .vault (can be done better, might change)
+            // 3. Change name of the temp from .enc to .vault (can be done better, might change)
             string encPath = Path.ChangeExtension(tempZip, ".enc");
             File.Move(encPath, encryptedPath, overwrite: true);
+
+            // 4. Cleanup
             File.Delete(tempZip);
+
+            // 5. Delete original files and folders
+            foreach (string path in filePaths)
+            {
+                try
+                {
+                    if (File.Exists(path))
+                    {
+                        File.Delete(path);
+                        log($"[VAULT] Deleted file: {path}");
+                    }
+                    else if (Directory.Exists(path))
+                    {
+                        Directory.Delete(path, recursive: true);
+                        log($"[VAULT] Deleted folder: {path}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    log($"⚠️ Failed to delete: {path} -- {ex.Message}");
+                }
+            }
 
             log($"[VAULT] Done. Vault saved as: {encryptedPath}");
         }
