@@ -424,7 +424,7 @@ public partial class MainWindow : Form
                     try
                     {
                         Encryption.EncryptFileOverwrite(file, txtPassword.Text, logger);
-                        Invoke(() => addStatus($"✅ Encrypted: {file}", Color.Green));
+                        Invoke(() => addStatus($"Encrypted: {file}", Color.Green));
                     }
                     catch (Exception ex)
                     {
@@ -441,7 +441,7 @@ public partial class MainWindow : Form
                 {
                     UpdateStatusColumnWidth();
                     btnEncrypt.Enabled = true;
-                    addStatus("Encryption completed (っ◔◡◔)っ", Color.White);
+                    addStatus("✅ Encryption completed (っ◔◡◔)っ", Color.White);
                     lblStatus.Font = new Font("Segoe UI", 15);
                     lblStatus.Text = "✅ Files encrypted.";
                 });
@@ -500,7 +500,7 @@ public partial class MainWindow : Form
                     try
                     {
                         Encryption.DecryptFileOverwrite(file, txtPassword.Text, logger);
-                        Invoke(() => addStatus($"✅ Decrypted: {file}", Color.Green));
+                        Invoke(() => addStatus($"Decrypted: {file}", Color.Green));
                     }
                     catch (Exception ex)
                     {
@@ -517,7 +517,7 @@ public partial class MainWindow : Form
                 {
                     UpdateStatusColumnWidth();
                     btnDecrypt.Enabled = true;
-                    addStatus("Decryption completed (っ◔◡◔)っ", Color.White);
+                    addStatus("✅ Decryption completed (っ◔◡◔)っ", Color.White);
                     lblStatus.Text = "✅ Files decrypted.";
                 });
 
@@ -585,7 +585,7 @@ public partial class MainWindow : Form
 
                         if (!File.Exists(file))
                         {
-                            Invoke(() => addStatus($"✅ Encrypted: {file}", Color.Green));
+                            Invoke(() => addStatus($"Encrypted: {file}", Color.Green));
                             continue;
                         }
 
@@ -597,7 +597,7 @@ public partial class MainWindow : Form
                     try
                     {
                         Vault.CreateVault(selectedFiles, outputVaultPath.FileName, txtPassword.Text, logger);
-                        Invoke(() => addStatus($"✅ Vault created: {outputVaultPath.FileName}", Color.Green));
+                        Invoke(() => addStatus($"Vault created: {outputVaultPath.FileName}", Color.Green));
                     }
                     catch (Exception ex)
                     {
@@ -609,7 +609,7 @@ public partial class MainWindow : Form
                 {
                     UpdateStatusColumnWidth();
                     btnCreateVault.Enabled = true;
-                    addStatus("Vault creation completed (っ◔◡◔)っ", Color.White);
+                    addStatus("✅ Vault creation completed (っ◔◡◔)っ", Color.White);
                     lblStatus.Text = "✅ Done.";
                 });
             }
@@ -672,7 +672,7 @@ public partial class MainWindow : Form
 
                         if (!File.Exists(file))
                         {
-                            Invoke(() => addStatus($"✅ Extracted: {file}", Color.Green));
+                            Invoke(() => addStatus($"Extracted: {file}", Color.Green));
                             continue;
                         }
 
@@ -699,7 +699,7 @@ public partial class MainWindow : Form
                 {
                     UpdateStatusColumnWidth();
                     btnExtractVault.Enabled = true;
-                    addStatus("Vault extraction completed (っ◔◡◔)っ", Color.White);
+                    addStatus("✅ Vault extraction completed (っ◔◡◔)っ", Color.White);
                     lblStatus.Text = "✅ Done.";
                 });
             }
