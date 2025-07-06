@@ -408,13 +408,7 @@ public partial class MainWindow : Form
                 });
                 
                 // Logger 
-                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                string projectRoot = Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\.."));
-                string logDirectory = Path.Combine(projectRoot, "logs");
-                Directory.CreateDirectory(logDirectory);
-                string logFilePath = Path.Combine(logDirectory, "dencrypt_log.txt");
-                File.WriteAllText(logFilePath, ""); // Clears logs 
-                var logger = Encryption.CreateFileLogger(logFilePath);
+                var logger = Encryption.CreateFileLogger();
 
                 for (int i = 0; i < selectedFiles.Count; i++)
                 {
@@ -484,13 +478,7 @@ public partial class MainWindow : Form
                 });
 
                 // Logger 
-                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                string projectRoot = Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\.."));
-                string logDirectory = Path.Combine(projectRoot, "logs");
-                Directory.CreateDirectory(logDirectory);
-                string logFilePath = Path.Combine(logDirectory, "dencrypt_log.txt");
-                File.WriteAllText(logFilePath, ""); // Clears logs 
-                var logger = Encryption.CreateFileLogger(logFilePath);
+                var logger = Encryption.CreateFileLogger();
 
                 for (int i = 0; i < selectedFiles.Count; i++)
                 {
@@ -570,13 +558,7 @@ public partial class MainWindow : Form
                     });
 
                     // Logger 
-                    string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                    string projectRoot = Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\.."));
-                    string logDirectory = Path.Combine(projectRoot, "logs");
-                    Directory.CreateDirectory(logDirectory);
-                    string logFilePath = Path.Combine(logDirectory, "dencrypt_log.txt");
-                    File.WriteAllText(logFilePath, ""); // Clears logs 
-                    var logger = Encryption.CreateFileLogger(logFilePath);
+                    var logger = Encryption.CreateFileLogger();
 
                     for (int i = 0; i < selectedFiles.Count; i++)
                     {
@@ -657,13 +639,7 @@ public partial class MainWindow : Form
                     });
 
                     // Logger 
-                    string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                    string projectRoot = Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\.."));
-                    string logDirectory = Path.Combine(projectRoot, "logs");
-                    Directory.CreateDirectory(logDirectory);
-                    string logFilePath = Path.Combine(logDirectory, "dencrypt_log.txt");
-                    File.WriteAllText(logFilePath, ""); // Clears logs 
-                    var logger = Encryption.CreateFileLogger(logFilePath);
+                    var logger = Encryption.CreateFileLogger();
 
                     for (int i = 0; i < selectedFiles.Count; i++)
                     {
