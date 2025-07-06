@@ -386,8 +386,18 @@ namespace DencryptCore
             return Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories).ToList();
         }
         
-        public static LogHandler CreateFileLogger(string logFilePath)
+        public static LogHandler CreateFileLogger()
         {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string projectRoot = Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\.."));
+
+            string logDirectory = Path.Combine(projectRoot, "logs");
+            Directory.CreateDirectory(logDirectory);
+
+            string logFilePath = Path.Combine(logDirectory, "dencrypt_log.txt");
+
+            File.WriteAllText(logFilePath, ""); // Clears logs 
+
             return msg =>
             {
                 var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {msg}{Environment.NewLine}";
