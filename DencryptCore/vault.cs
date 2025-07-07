@@ -65,7 +65,7 @@ namespace DencryptCore
             {
                 try
                 {
-                    if (File.Exists(path))
+                    if (SettingsManager.Current.RemoveOriginalFiles)
                     {
                         File.Delete(path);
                         log($"[VAULT] Deleted file: {path}");
