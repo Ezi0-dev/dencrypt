@@ -1,6 +1,7 @@
 using System;
 using System.Windows.Forms;
 using System.Drawing;
+using DencryptCore;
 
 namespace DencryptGUI
 {
@@ -68,6 +69,51 @@ namespace DencryptGUI
             customPopup.Controls.Add(pfp);
 
             customPopup.ShowDialog();
+        }
+        public static void settingsPopup(object sender, EventArgs e)
+        {
+            Form settingsPopup = new Form()
+            {
+                Text = "Settings",
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterParent,
+                Size = new Size(450, 400),
+                Padding = new Padding(10),
+                ShowInTaskbar = false,
+                MaximizeBox = false
+            };
+
+            Button btnSave = new Button()
+            {
+                Text = "Save",
+                Anchor = AnchorStyles.Bottom,
+                Dock = DockStyle.Bottom,
+            };
+
+            CheckBox chkRemoveOriginal = new CheckBox()
+            {
+                Text = "Delete original file when creating vault",
+                Anchor = AnchorStyles.Bottom,
+                Dock = DockStyle.Top,
+                Font = new Font("Segoe UI", 12),
+            };
+
+            settingsPopup.Controls.Add(chkRemoveOriginal);
+            settingsPopup.Controls.Add(btnSave);
+
+            btnSave.Click += (s, args) => 
+            {
+                SettingsManager.Current.RemoveOriginalFiles = chkRemoveOriginal.Checked;
+                SettingsManager.Save();
+                MessageBox.Show("Settings saved!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+
+            chkRemoveOriginal.Checked = SettingsManager.Current.RemoveOriginalFiles;
+
+            Style.ApplyDarkTheme(settingsPopup);
+
+            settingsPopup.ShowDialog();
+        
         }
     }
 }
