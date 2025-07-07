@@ -184,6 +184,13 @@ public partial class MainWindow : Form
             Anchor = AnchorStyles.Bottom
         };
 
+        Button btnShowSettings = new Button()
+        {
+            Text = "⚙ Show settings",
+            AutoSize = true,
+            Width = 500,
+        };
+
         Button btnShowPassword = new Button()
         {
             Text = "👁",
@@ -240,6 +247,7 @@ public partial class MainWindow : Form
 
         txtPassword.TextChanged += passwordCheck;
         gifBox.Click += Windows.secretPopup;
+        btnShowSettings.Click += Windows.settingsPopup;
         btnShowLogs.Click += showLogs;
 
         mainPanel.Controls.Add(buttonRow);
@@ -253,11 +261,12 @@ public partial class MainWindow : Form
         
         mainPanel.Controls.Add(listRow);
         listRow.Controls.Add(listFiles);
-        listRow.SetRowSpan(listFiles, 3);
+        listRow.SetRowSpan(listFiles, 4);
         listRow.Controls.Add(btnDelete);
         listRow.Controls.Add(btnClear);
         listRow.Controls.Add(btnClear, 1, 1);
-        listRow.Controls.Add(btnShowLogs, 2, 1);
+        listRow.Controls.Add(btnShowSettings, 2, 1);
+        listRow.Controls.Add(btnShowLogs, 3, 1);
 
         void UpdateStatusColumnWidth() // It must look nice idc
         {
