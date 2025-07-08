@@ -77,7 +77,7 @@ namespace DencryptGUI
                 Text = "Settings",
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 StartPosition = FormStartPosition.CenterParent,
-                Size = new Size(450, 400),
+                Size = new Size(550, 400),
                 Padding = new Padding(10),
                 ShowInTaskbar = false,
                 MaximizeBox = false
@@ -92,28 +92,56 @@ namespace DencryptGUI
 
             CheckBox chkRemoveOriginal = new CheckBox()
             {
-                Text = "Delete original file when creating vault",
+                Text = "Delete original file(s) and folder(s) when creating vault",
                 Anchor = AnchorStyles.Bottom,
                 Dock = DockStyle.Top,
-                Font = new Font("Segoe UI", 12),
+                Font = new Font("Segoe UI", 13),
+                AutoSize = true,
             };
 
             settingsPopup.Controls.Add(chkRemoveOriginal);
             settingsPopup.Controls.Add(btnSave);
 
-            btnSave.Click += (s, args) => 
+            bool originalValue = SettingsManager.Current.RemoveOriginalFiles;
+
+            chkRemoveOriginal.Checked = originalValue;
+
+            btnSave.Click += (s, args) =>
             {
                 SettingsManager.Current.RemoveOriginalFiles = chkRemoveOriginal.Checked;
                 SettingsManager.Save();
                 MessageBox.Show("Settings saved!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                originalValue = chkRemoveOriginal.Checked; 
+                settingsPopup.Tag = "Saved";
+                settingsPopup.Close();
             };
 
-            chkRemoveOriginal.Checked = SettingsManager.Current.RemoveOriginalFiles;
+            settingsPopup.FormClosing += (s, e) =>
+            {
+                if (chkRemoveOriginal.Checked != originalValue && settingsPopup.Tag?.ToString() != "saved")
+                {
+                    DialogResult result = MessageBox.Show(
+                        "You have unsaved settings. Do you want to save them before exiting?",
+                        "Unsaved Settings",
+                        MessageBoxButtons.YesNoCancel,
+                        MessageBoxIcon.Warning);
+
+                    if (result == DialogResult.Cancel)
+                    {
+                        e.Cancel = true;
+                    }
+                    else if (result == DialogResult.Yes)
+                    {
+                        SettingsManager.Current.RemoveOriginalFiles = chkRemoveOriginal.Checked;
+                        SettingsManager.Save();
+                        MessageBox.Show("Settings saved!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                }
+            };
 
             Style.ApplyDarkTheme(settingsPopup);
 
             settingsPopup.ShowDialog();
-        
         }
     }
 }
