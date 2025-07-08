@@ -18,6 +18,10 @@ namespace DencryptCore
         );
 
         public static AppSettings Current { get; private set; } = new AppSettings();
+        private static AppSettings _lastSaved = new AppSettings();
+
+        public static bool HasUnsavedChanges =>
+            JsonSerializer.Serialize(Current) != JsonSerializer.Serialize(_lastSaved);
 
         static SettingsManager()
         {
@@ -53,6 +57,7 @@ namespace DencryptCore
 
                 string json = JsonSerializer.Serialize(Current, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(settingsFile, json);
+                _lastSaved = JsonSerializer.Deserialize<AppSettings>(json);
             }
             catch (Exception ex)
             {
