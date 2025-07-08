@@ -186,7 +186,7 @@ public partial class MainWindow : Form
 
         Button btnShowSettings = new Button()
         {
-            Text = "⚙ Show settings",
+            Text = "⚙ Settings",
             AutoSize = true,
             Width = 500,
         };
