@@ -307,6 +307,21 @@ public partial class MainWindow : Form
         listFiles.AllowDrop = true;
         Color originalColor = listFiles.BackColor;
 
+        Timer asciiTimer = new Timer();
+        int currentFrame = 0;
+
+        List<string> asciiFrames = new List<string>
+        {
+            "⣾ Loading...",
+            "⣽ Loading...",
+            "⣻ Loading...",
+            "⢿ Loading...",
+            "⡿ Loading...",
+            "⣟ Loading...",
+            "⣯ Loading...",
+            "⣷ Loading..."
+        };
+
         listFiles.DragEnter += (s, e) =>
         {
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
@@ -399,7 +414,7 @@ public partial class MainWindow : Form
 
             btnEncrypt.Enabled = false;
             isEncrypting = true;
-            lblStatus.Text = "🔄 Encrypting...";
+            StartAsciiAnimation(); 
 
             await Task.Run(() =>
             {
@@ -446,7 +461,7 @@ public partial class MainWindow : Form
                     btnEncrypt.Enabled = true;
                     addStatus("✅ Encryption completed (っ◔◡◔)っ", Color.White);
                     lblStatus.Font = new Font("Segoe UI", 15);
-                    lblStatus.Text = "✅ Files encrypted.";
+                    StopAsciiAnimation();
                 });
 
             }
@@ -468,8 +483,8 @@ public partial class MainWindow : Form
                 selectedFiles.Count;
 
             btnDecrypt.Enabled = false;
-            isEncrypting = false;
-            lblStatus.Text = "🔄 Decrypting...";
+            isEncrypting = false;   
+            StartAsciiAnimation(); 
 
             await Task.Run(() =>
             {
@@ -515,7 +530,7 @@ public partial class MainWindow : Form
                     UpdateStatusColumnWidth();
                     btnDecrypt.Enabled = true;
                     addStatus("✅ Decryption completed (っ◔◡◔)っ", Color.White);
-                    lblStatus.Text = "✅ Files decrypted.";
+                    StopAsciiAnimation(); 
                 });
 
             }
@@ -547,7 +562,7 @@ public partial class MainWindow : Form
 
             btnCreateVault.Enabled = false;
             isEncrypting = true;
-            lblStatus.Text = "🔄 Creating Vault...";
+            StartAsciiAnimation();
 
             if (outputVaultPath.ShowDialog() == DialogResult.OK)
             {
@@ -601,7 +616,7 @@ public partial class MainWindow : Form
                     UpdateStatusColumnWidth();
                     btnCreateVault.Enabled = true;
                     addStatus("✅ Vault creation completed (っ◔◡◔)っ", Color.White);
-                    lblStatus.Text = "✅ Done.";
+                    StopAsciiAnimation();
                 });
             }
         };
@@ -625,7 +640,7 @@ public partial class MainWindow : Form
 
             btnExtractVault.Enabled = false;
             isEncrypting = true;
-            lblStatus.Text = "🔄 Extracting files from Vault...";
+            StartAsciiAnimation(); 
 
             using FolderBrowserDialog outputDir = new FolderBrowserDialog();
             outputDir.Description = "Extract vault to...";
@@ -685,7 +700,7 @@ public partial class MainWindow : Form
                     UpdateStatusColumnWidth();
                     btnExtractVault.Enabled = true;
                     addStatus("✅ Vault extraction completed (っ◔◡◔)っ", Color.White);
-                    lblStatus.Text = "✅ Done.";
+                    StopAsciiAnimation();
                 });
             }
         };
@@ -765,6 +780,23 @@ public partial class MainWindow : Form
             txtPassword.UseSystemPasswordChar = !txtPassword.UseSystemPasswordChar;
             btnShowPassword.Text = txtPassword.UseSystemPasswordChar ? "👁" : "❌";
         };
+
+        void StartAsciiAnimation()
+        {
+            asciiTimer.Interval = 100; // Milliseconds
+            asciiTimer.Tick += (s, e) =>
+            {
+                lblStatus.Text = asciiFrames[currentFrame];
+                currentFrame = (currentFrame + 1) % asciiFrames.Count;
+            };
+            asciiTimer.Start();
+        }
+
+        void StopAsciiAnimation(string finalText = "✅ Done!")
+        {
+            asciiTimer.Stop();
+            lblStatus.Text = finalText;
+        }
 
         // Apply dark theme to the form and its controls
         Style.ApplyDarkTheme(this);
