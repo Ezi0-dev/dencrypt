@@ -60,6 +60,7 @@ namespace DencryptCore
             File.Delete(tempZip);
 
             // 5. Delete original files and folders
+            SettingsManager.Load();
             foreach (string path in filePaths)
             {
                 try
@@ -71,7 +72,7 @@ namespace DencryptCore
                     }
                     else if (Directory.Exists(path))
                     {
-                        Directory.Delete(path, recursive: true);
+                        Directory.Delete(path, true);
                         log($"[VAULT] Deleted folder: {path}");
                     }
                 }
