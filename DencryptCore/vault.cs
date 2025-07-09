@@ -45,7 +45,6 @@ namespace DencryptCore
                             log($"[VAULT] Added from folder: {relativePath}");
                         }
                     }
-                    
                 }
             }
 
