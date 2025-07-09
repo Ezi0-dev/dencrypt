@@ -412,10 +412,8 @@ public partial class MainWindow : Form
             Directory.GetFiles(selectedFolderPath, "*", SearchOption.AllDirectories).Length :
             selectedFiles.Count;
 
-            btnEncrypt.Enabled = false;
             isEncrypting = true;
-            StartAsciiAnimation(); 
-
+             
             await Task.Run(() =>
             {
                 if (selectedFiles.Count == 0)
@@ -433,6 +431,9 @@ public partial class MainWindow : Form
                 
                 // Logger 
                 var logger = Encryption.CreateFileLogger();
+
+                SetGuiEnabled(false);
+                StartAsciiAnimation();
 
                 for (int i = 0; i < selectedFiles.Count; i++)
                 {
@@ -458,7 +459,7 @@ public partial class MainWindow : Form
                 Invoke(() =>
                 {
                     UpdateStatusColumnWidth();
-                    btnEncrypt.Enabled = true;
+                    SetGuiEnabled(true);
                     addStatus("✅ Encryption completed (っ◔◡◔)っ", Color.White);
                     lblStatus.Font = new Font("Segoe UI", 15);
                     StopAsciiAnimation();
@@ -482,9 +483,7 @@ public partial class MainWindow : Form
                 Directory.GetFiles(selectedFolderPath, "*", SearchOption.AllDirectories).Length :
                 selectedFiles.Count;
 
-            btnDecrypt.Enabled = false;
             isEncrypting = false;   
-            StartAsciiAnimation(); 
 
             await Task.Run(() =>
             {
@@ -503,6 +502,9 @@ public partial class MainWindow : Form
 
                 // Logger 
                 var logger = Encryption.CreateFileLogger();
+
+                SetGuiEnabled(false);
+                StartAsciiAnimation();
 
                 for (int i = 0; i < selectedFiles.Count; i++)
                 {
@@ -528,7 +530,7 @@ public partial class MainWindow : Form
                 Invoke(() =>
                 {
                     UpdateStatusColumnWidth();
-                    btnDecrypt.Enabled = true;
+                    SetGuiEnabled(true);
                     addStatus("✅ Decryption completed (っ◔◡◔)っ", Color.White);
                     StopAsciiAnimation(); 
                 });
@@ -560,7 +562,6 @@ public partial class MainWindow : Form
             string savePath = outputVaultPath.FileName;
             string password = txtPassword.Text;
 
-            btnCreateVault.Enabled = false;
             isEncrypting = true;
             StartAsciiAnimation();
 
@@ -570,6 +571,7 @@ public partial class MainWindow : Form
                 {
                     if (selectedFiles.Count == 0)
                     {
+                        StopAsciiAnimation();
                         Invoke(() => lblStatus.Text = "❌ No files or folder selected.");
                         btnCreateVault.Enabled = true;
                         return;
@@ -583,6 +585,8 @@ public partial class MainWindow : Form
 
                     // Logger 
                     var logger = Encryption.CreateFileLogger();
+
+                    SetGuiEnabled(false);
 
                     for (int i = 0; i < selectedFiles.Count; i++)
                     {
@@ -614,10 +618,15 @@ public partial class MainWindow : Form
                 Invoke(() =>
                 {
                     UpdateStatusColumnWidth();
-                    btnCreateVault.Enabled = true;
+                    SetGuiEnabled(true);
                     addStatus("✅ Vault creation completed (っ◔◡◔)っ", Color.White);
                     StopAsciiAnimation();
                 });
+            }
+            else
+            {
+                StopAsciiAnimation();
+                SetGuiEnabled(true);
             }
         };
 
@@ -638,9 +647,8 @@ public partial class MainWindow : Form
 
             string password = txtPassword.Text;
 
-            btnExtractVault.Enabled = false;
             isEncrypting = true;
-            StartAsciiAnimation(); 
+            StartAsciiAnimation();
 
             using FolderBrowserDialog outputDir = new FolderBrowserDialog();
             outputDir.Description = "Extract vault to...";
@@ -651,6 +659,7 @@ public partial class MainWindow : Form
                 {
                     if (selectedFiles.Count == 0)
                     {
+                        StopAsciiAnimation();
                         Invoke(() => lblStatus.Text = "❌ No files or folder selected.");
                         btnExtractVault.Enabled = true;
                         return;
@@ -664,6 +673,8 @@ public partial class MainWindow : Form
 
                     // Logger 
                     var logger = Encryption.CreateFileLogger();
+
+                    SetGuiEnabled(false);
 
                     for (int i = 0; i < selectedFiles.Count; i++)
                     {
@@ -698,10 +709,15 @@ public partial class MainWindow : Form
                 Invoke(() =>
                 {
                     UpdateStatusColumnWidth();
-                    btnExtractVault.Enabled = true;
+                    SetGuiEnabled(true);
                     addStatus("✅ Vault extraction completed (っ◔◡◔)っ", Color.White);
                     StopAsciiAnimation();
                 });
+            }
+            else
+            {
+                StopAsciiAnimation();
+                SetGuiEnabled(true);
             }
         };
 
@@ -796,6 +812,20 @@ public partial class MainWindow : Form
         {
             asciiTimer.Stop();
             lblStatus.Text = finalText;
+        }
+
+        void SetGuiEnabled(bool enabled)
+        {
+            btnEncrypt.Enabled = enabled;
+            btnDecrypt.Enabled = enabled;
+            btnSelectFiles.Enabled = enabled;
+            btnSelectFolder.Enabled = enabled;
+            btnCreateVault.Enabled = enabled;
+            btnExtractVault.Enabled = enabled;
+            btnShowSettings.Enabled = enabled;
+            btnDelete.Enabled = enabled;
+            btnClear.Enabled = enabled;
+            btnShowLogs.Enabled = enabled;
         }
 
         // Apply dark theme to the form and its controls
