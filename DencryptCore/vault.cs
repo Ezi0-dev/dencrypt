@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO.Compression;
 using System;
 using System.Text;
+using System.Linq;
 
 namespace DencryptCore
 {
@@ -63,25 +64,11 @@ namespace DencryptCore
             SettingsManager.Load();
             foreach (string path in filePaths)
             {
-                try
+                if (SettingsManager.Current.RemoveOriginalFiles)
                 {
-                    if (SettingsManager.Current.RemoveOriginalFiles)
-                    {
-                        File.Delete(path);
-                        log($"[VAULT] Deleted file: {path}");
-                    }
-                    else if (Directory.Exists(path))
-                    {
-                        Directory.Delete(path, true);
-                        log($"[VAULT] Deleted folder: {path}");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    log($"⚠️ Failed to delete: {path} -- {ex.Message}");
+                    DeleteOriginals(filePaths, log);
                 }
             }
-
             log($"[VAULT] Done. Vault saved as: {encryptedPath}");
         }
 
@@ -96,7 +83,9 @@ namespace DencryptCore
             if (!IsValidVaultFile(vaultPath))
                 throw new Exception("❌ Not a valid Dencrypt Vault File.");
 
-            
+            if (!Directory.Exists(outputDir))
+                Directory.CreateDirectory(outputDir);
+
             string tempZipPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".zip");
 
             try
@@ -105,6 +94,9 @@ namespace DencryptCore
                 Encryption.DecryptFileOverwrite(vaultPath, password, log);
 
                 string decryptedPath = Path.ChangeExtension(vaultPath, ".zip");
+                if (!File.Exists(decryptedPath))
+                    throw new Exception("Decryption failed: temp zip not found.");
+
                 File.Move(decryptedPath, tempZipPath);
 
                 log("Vault decrypted to temp ZIP.");
@@ -165,6 +157,52 @@ namespace DencryptCore
             {
                 return false;
             }
+        }
+        public static void DeleteOriginals(List<string> paths, Encryption.LogHandler log = default!)
+        {
+            log ??= _ => { };
+
+            // Files first
+            foreach (string path in paths.Where(File.Exists))
+            {
+                try
+                {
+                    File.SetAttributes(path, FileAttributes.Normal);
+                    File.Delete(path);
+                    log($"[VAULT] Deleted file: {path}");
+                }
+                catch (Exception ex)
+                {
+                    log($"❌ Failed to delete file: {path}. Reason: {ex.Message}");
+                }
+            }
+
+            // Folders last  -  to avoid "access denied" :(
+            foreach (string path in paths.Where(Directory.Exists))
+            {
+                try
+                {
+                    ForceDeleteDirectory(path);
+                    log($"[VAULT] Deleted folder: {path}");
+                }
+                catch (Exception ex)
+                {
+                    log($"❌ Failed to delete folder: {path}. Reason: {ex.Message}");
+                }
+            }
+        }
+        static void ForceDeleteDirectory(string path)
+        {
+            foreach (string file in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    File.SetAttributes(file, FileAttributes.Normal);
+                }
+                catch {} // Ignores errors, tries to delete anyway
+            }
+
+            Directory.Delete(path, recursive: true);
         }
     }
 }
