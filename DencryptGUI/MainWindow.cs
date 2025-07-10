@@ -164,7 +164,7 @@ public partial class MainWindow : Form
 
         Button btnDelete = new Button()
         {
-            Text = "🗑 Delete selected items",
+            Text = "🗑 Clear selected items",
             AutoSize = true,
             Width = 500,
         };
@@ -460,7 +460,7 @@ public partial class MainWindow : Form
                 {
                     UpdateStatusColumnWidth();
                     SetGuiEnabled(true);
-                    addStatus("✅ Encryption completed (っ◔◡◔)っ", Color.White);
+                    addStatus("✅ Encryption completed", Color.White);
                     lblStatus.Font = new Font("Segoe UI", 15);
                     StopAsciiAnimation();
                 });
@@ -475,6 +475,12 @@ public partial class MainWindow : Form
             if (string.IsNullOrWhiteSpace(txtPassword.Text))
             {
                 lblStatus.Text = "❌ Enter a password.";
+                return;
+            }
+
+            if (selectedFiles.Any(file => Path.GetExtension(file).Equals(".vault", StringComparison.OrdinalIgnoreCase)))
+            {
+                lblStatus.Text = "❌ One or more selected files are .vault files. Use the 'Extract Vault' button instead.";
                 return;
             }
 
@@ -531,7 +537,7 @@ public partial class MainWindow : Form
                 {
                     UpdateStatusColumnWidth();
                     SetGuiEnabled(true);
-                    addStatus("✅ Decryption completed (っ◔◡◔)っ", Color.White);
+                    addStatus("✅ Decryption completed", Color.White);
                     StopAsciiAnimation(); 
                 });
 
@@ -619,7 +625,7 @@ public partial class MainWindow : Form
                 {
                     UpdateStatusColumnWidth();
                     SetGuiEnabled(true);
-                    addStatus("✅ Vault creation completed (っ◔◡◔)っ", Color.White);
+                    addStatus("✅ Vault creation completed", Color.White);
                     StopAsciiAnimation();
                 });
             }
@@ -640,10 +646,7 @@ public partial class MainWindow : Form
             }
 
             progressBar.Value = 0;
-            progressBar.Maximum = isFolder ?
-
-            Directory.GetFiles(selectedFolderPath, "*", SearchOption.AllDirectories).Length :
-            selectedFiles.Count;
+            progressBar.Maximum = selectedFiles.Count;
 
             string password = txtPassword.Text;
 
@@ -681,7 +684,7 @@ public partial class MainWindow : Form
 
                         string file = selectedFiles[i];
 
-                        if (!File.Exists(file))
+                        if (!File.Exists(file) && !Directory.Exists(file))
                         {
                             Invoke(() => addStatus($"Extracted: {file}", Color.Green));
                             continue;
@@ -710,7 +713,7 @@ public partial class MainWindow : Form
                 {
                     UpdateStatusColumnWidth();
                     SetGuiEnabled(true);
-                    addStatus("✅ Vault extraction completed (っ◔◡◔)っ", Color.White);
+                    addStatus("✅ Vault extraction completed", Color.White);
                     StopAsciiAnimation();
                 });
             }
