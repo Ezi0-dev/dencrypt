@@ -9,6 +9,8 @@
 
 ## 📦 Installation
 
+#### NOTE : Settings are stored in "C:\Users\USERNAME\AppData\Roaming\Dencrypt"
+
 ### 🔧 Build from source:
 
 ```bash
